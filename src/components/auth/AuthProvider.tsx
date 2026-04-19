@@ -39,21 +39,38 @@ export function useAuth() {
   return ctx;
 }
 
-// Client-side gate: redirect unauthenticated users to /login (preserves next)
-export function AuthGate({ children, publicPaths = ["/login", "/register", "/", "/about"] }: { children: React.ReactNode; publicPaths?: string[] }) {
+const PUBLIC_PATHS = ["/", "/login", "/register", "/about", "/contact", "/privacy", "/terms", "/verify-email", "/forgot-password", "/reset-password"];
+
+function isPublicPath(pathname: string) {
+  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
+// Client-side gate: blocks protected content from rendering until session is confirmed
+export function AuthGate({ children }: { children: React.ReactNode }) {
   const { status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
 
+  const publicPath = pathname ? isPublicPath(pathname) : true;
+
   React.useEffect(() => {
-    if (!pathname) return;
-    if (publicPaths.some((p) => pathname === p || pathname.startsWith(p + "/"))) return;
+    if (!pathname || publicPath) return;
     if (status === "unauthenticated") {
-      const next = pathname + (search ? `?${search.toString()}` : "");
+      const next = pathname + (search?.toString() ? `?${search.toString()}` : "");
       router.push(`/login?next=${encodeURIComponent(next)}`);
     }
-  }, [status, pathname, router, search, publicPaths]);
+  }, [status, pathname, router, search, publicPath]);
+
+  // For protected routes: render nothing while session is loading or user is not authenticated
+  // This prevents the flash of protected content before redirect
+  if (!publicPath && status !== "authenticated") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }
