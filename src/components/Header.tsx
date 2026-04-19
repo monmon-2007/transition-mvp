@@ -37,6 +37,9 @@ export default function Header() {
           <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text">
             NovaPivots
           </span>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-white bg-blue-500 px-1.5 py-0.5 rounded-full leading-none">
+            Beta
+          </span>
         </Link>
 
         <nav className="flex items-center gap-6">

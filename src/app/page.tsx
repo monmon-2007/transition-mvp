@@ -6,8 +6,46 @@ import Link from 'next/link';
 export default function Home() {
   const router = useRouter();
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "NovaPivots",
+    "url": "https://www.novapivots.com",
+    "description": "NovaPivots is a career transition tool that generates a personalized action plan for people who have been laid off or are changing careers. It covers severance review, benefits transition, financial runway, job search tracking, and AI-powered resume tailoring.",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "description": "Free during beta"
+    },
+    "audience": {
+      "@type": "Audience",
+      "audienceType": "People navigating layoffs, career transitions, or job searches"
+    },
+    "featureList": [
+      "Personalized layoff action plan",
+      "Severance and legal review checklist",
+      "Benefits and COBRA transition guide",
+      "Financial runway calculator",
+      "AI-powered resume tailoring",
+      "Job application tracker",
+      "Prioritized task list"
+    ],
+    "creator": {
+      "@type": "Organization",
+      "name": "NovaPivots",
+      "url": "https://www.novapivots.com"
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-indigo-50 relative overflow-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-96 h-96 bg-violet-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
@@ -46,7 +84,7 @@ export default function Home() {
                 </svg>
               </button>
 
-              <p className="text-sm text-gray-500 mt-4">No credit card · Takes 3 minutes</p>
+              <p className="text-sm text-gray-500 mt-4">No credit card · Takes 3 minutes · Currently in beta — free while we're building</p>
 
               {/* Audience tags */}
               <div className="mt-12 flex flex-wrap justify-center gap-3">
