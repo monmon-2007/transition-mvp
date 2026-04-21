@@ -9,6 +9,7 @@ import {
   ArrowRight, HelpCircle, Briefcase, DollarSign,
   Heart, TrendingUp, Scale, Globe, Pencil, Lightbulb,
 } from "lucide-react";
+import FeedbackModal from "@/components/FeedbackModal";
 
 /* ─── Types ─── */
 type Urgency = "critical" | "high" | "medium";
@@ -273,18 +274,18 @@ export default function SituationSummaryPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="text-blue-600 font-semibold text-base">Transition</span>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+          <span className="text-blue-600 font-semibold text-sm sm:text-base">Transition</span>
           <Link
             href="/onboarding/layoff/tasks"
-            className="text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1 transition-colors"
+            className="text-xs sm:text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1 transition-colors"
           >
             Skip to action plan <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-12 pb-28">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 pb-28">
         {/* Hero */}
         <div className="mb-10">
           <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-3">
@@ -586,6 +587,7 @@ export default function SituationSummaryPage() {
           </Link>
         </div>
       </main>
+      <FeedbackModal contextPage="layoff-summary" />
     </div>
   );
 }

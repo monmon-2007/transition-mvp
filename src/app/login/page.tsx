@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import posthog from "posthog-js";
 
 type AuthMode = "signin" | "register";
 
@@ -147,6 +148,7 @@ export default function AuthPage() {
         return;
       }
 
+      posthog.capture("user_signed_up", { email });
       setSuccess("Account created! Check your email to verify your account before signing in.");
       setTimeout(() => switchMode("signin"), 3000);
     } catch (err) {

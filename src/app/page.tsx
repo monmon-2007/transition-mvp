@@ -1,10 +1,9 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 
 export default function Home() {
-  const router = useRouter();
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -46,6 +45,18 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+
+      {/* Closed Beta Banner */}
+      <div className="relative z-20 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-center py-2.5 px-4 text-sm font-medium">
+        <span className="inline-flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+          Closed beta — free for the first 100 members. Spots are limited.
+          <Link href="/login?mode=register" className="underline underline-offset-2 font-semibold hover:text-white/80 transition-colors">
+            Claim your spot →
+          </Link>
+        </span>
+      </div>
+
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-96 h-96 bg-violet-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
@@ -56,35 +67,44 @@ export default function Home() {
       {/* Main content */}
       <div className="relative z-10">
         {/* Hero Section */}
-        <section className="px-6 pt-20 pb-32">
+        <section className="px-4 sm:px-6 pt-16 sm:pt-20 pb-20 sm:pb-32">
           <div className="max-w-7xl mx-auto">
             <div className="text-center max-w-4xl mx-auto">
               {/* Main headline */}
-              <h1 className="text-6xl sm:text-7xl lg:text-8xl font-black text-gray-900 mb-6 leading-tight">
+              <h1 className="text-5xl sm:text-6xl lg:text-8xl font-black text-gray-900 mb-6 leading-tight">
                 From laid off to
                 <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-transparent bg-clip-text"> focused</span>
               </h1>
 
               {/* Subheadline */}
-              <p className="text-xl sm:text-2xl text-gray-600 mb-4 max-w-3xl mx-auto leading-relaxed">
+              <p className="text-lg sm:text-xl md:text-2xl text-gray-600 mb-4 max-w-3xl mx-auto leading-relaxed">
                 A personalized action plan based on your specific situation — severance, benefits, finances, and job search — all in one place.
               </p>
-              <p className="text-base text-gray-400 mb-12 max-w-2xl mx-auto">
+              <p className="text-sm sm:text-base text-gray-400 mb-10 max-w-2xl mx-auto">
                 No generic advice. No guarantees. Just a structured plan built around your circumstances.
               </p>
 
               {/* CTA */}
-              <button
-                onClick={() => router.push('/onboarding')}
-                className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-12 py-5 rounded-2xl text-xl font-bold shadow-2xl shadow-violet-500/30 hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
+              <Link
+                href="/login"
+                onClick={() => posthog.capture('cta_clicked', { location: 'hero' })}
+                className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-8 sm:px-12 py-4 sm:py-5 rounded-2xl text-lg sm:text-xl font-bold shadow-2xl shadow-violet-500/30 hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
               >
-                Build your plan — free
-                <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                Start my free action plan
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
-              </button>
+              </Link>
 
-              <p className="text-sm text-gray-500 mt-4">No credit card · Takes 3 minutes · Currently in beta — free while we're building</p>
+              <p className="text-xs sm:text-sm text-gray-500 mt-4">No credit card · Takes 3 minutes · Free while in beta</p>
+
+              {/* Proof line */}
+              <div className="mt-6 inline-flex items-center gap-2 bg-white/70 border border-violet-100 backdrop-blur-sm rounded-xl px-5 py-3 text-sm font-medium text-gray-700 shadow-sm">
+                <svg className="w-4 h-4 text-violet-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Built from your real severance docs. Not generic checklists.
+              </div>
 
               {/* Audience tags */}
               <div className="mt-12 flex flex-wrap justify-center gap-3">
@@ -106,9 +126,9 @@ export default function Home() {
         </section>
 
         {/* Founder Story Section */}
-        <section className="px-6 py-20 bg-gradient-to-br from-violet-600 to-indigo-600">
+        <section className="px-4 sm:px-6 py-16 sm:py-20 bg-gradient-to-br from-violet-600 to-indigo-600">
           <div className="max-w-4xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-12">
+            <div className="bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 p-6 sm:p-12">
               <div className="flex items-start gap-4 mb-6">
                 <div className="flex-shrink-0 w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-3xl">
                   👤
@@ -119,7 +139,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <blockquote className="text-white text-xl sm:text-2xl leading-relaxed mb-6 font-light">
+              <blockquote className="text-white text-lg sm:text-2xl leading-relaxed mb-6 font-light">
                 "I was laid off as a Senior Software Engineer. Lost, anxious, and unsure where to start.
                 <span className="font-semibold"> What helped most wasn't motivation — it was having a clear, structured plan for what to do first.</span>"
               </blockquote>
@@ -132,10 +152,10 @@ export default function Home() {
         </section>
 
         {/* How It Works Section */}
-        <section className="px-6 py-32">
+        <section className="px-4 sm:px-6 py-16 sm:py-32">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-20">
-              <h2 className="text-5xl font-black text-gray-900 mb-4">
+              <h2 className="text-3xl sm:text-5xl font-black text-gray-900 mb-4">
                 Your plan in 3 steps
               </h2>
               <p className="text-xl text-gray-600">
@@ -178,7 +198,7 @@ export default function Home() {
         </section>
 
         {/* What it covers */}
-        <section className="px-6 py-20 bg-gray-50">
+        <section className="px-4 sm:px-6 py-16 sm:py-20 bg-gray-50">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-4xl font-black text-gray-900 mb-4">
@@ -210,25 +230,56 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Screenshots Section */}
+        <section className="px-6 py-20 bg-white">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-black text-gray-900 mb-4">See it in action</h2>
+              <p className="text-lg text-gray-500">Your dashboard, your plan, your pace.</p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6">
+              {[
+                { src: '/screenshots/dashboard.png', label: 'AI Resume Builder & Job Tailoring' },
+                { src: '/screenshots/runway.png', label: 'Financial Runway' },
+                { src: '/screenshots/task.png', label: 'Task Tracker' },
+              ].map(({ src, label }) => (
+                <div key={src} className="rounded-2xl overflow-hidden border border-gray-200 shadow-md bg-violet-50">
+                  <div className="h-56 sm:h-64 overflow-hidden">
+                    <img
+                      src={src}
+                      alt={label}
+                      className="w-full h-full object-cover object-top"
+                    />
+                  </div>
+                  <div className="px-4 py-2.5 border-t border-gray-100 bg-white">
+                    <p className="text-xs font-medium text-gray-500">{label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Final CTA */}
-        <section className="px-6 py-32">
+        <section className="px-4 sm:px-6 py-16 sm:py-32">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-5xl sm:text-6xl font-black text-gray-900 mb-6">
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-gray-900 mb-6">
               Ready to get organized?
             </h2>
-            <p className="text-2xl text-gray-600 mb-12">
+            <p className="text-xl sm:text-2xl text-gray-600 mb-10">
               Build a plan around your actual situation — free, in about 3 minutes.
             </p>
 
-            <button
-              onClick={() => router.push('/onboarding')}
-              className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-12 py-6 rounded-2xl text-2xl font-bold shadow-2xl shadow-violet-500/30 hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
+            <Link
+              href="/login"
+              onClick={() => posthog.capture('cta_clicked', { location: 'bottom' })}
+              className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-8 sm:px-12 py-4 sm:py-6 rounded-2xl text-xl sm:text-2xl font-bold shadow-2xl shadow-violet-500/30 hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
             >
-              Start your plan
+              Start my free action plan
               <svg className="w-7 h-7 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
-            </button>
+            </Link>
 
             <p className="text-gray-500 mt-6">
               Free · No credit card · 3-minute setup

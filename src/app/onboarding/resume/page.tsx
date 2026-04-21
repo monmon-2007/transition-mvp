@@ -139,29 +139,59 @@ export default function CompleteResumeSystem({ intakeContext }: { intakeContext?
     setTimeout(() => setNotification({ show: false, type: 'success', message: '' }), 4000);
   };
 
-  // Handle file upload
+  const [uploadParsing, setUploadParsing] = useState(false);
+
+  // Handle file upload — parses with AI and opens builder pre-populated
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = event.target.files?.[0];
     if (!file) return;
+    // Reset input so same file can be re-selected
+    event.target.value = '';
+
+    setUploadParsing(true);
+    showNotification('info', 'Parsing your resume with AI — this takes a few seconds…');
 
     try {
-      const text = await file.text();
+      const form = new FormData();
+      form.append('file', file);
+
+      const res = await fetch('/api/resumes/parse', { method: 'POST', body: form });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showNotification('error', data.error || 'Failed to parse resume');
+        return;
+      }
+
       const baseName = file.name.replace(/\.[^/.]+$/, '');
-      const saved = await apiCreate({ name: baseName, targetRole: '', content: text });
+
+      // Save to backend with parsed data serialized as JSON content
+      const saved = await apiCreate({
+        name: baseName,
+        targetRole: data.personalInfo?.title || '',
+        content: JSON.stringify(data),
+      });
+
       const newResume: Resume = {
         id: saved.id,
         backendId: saved.id,
         name: saved.name,
-        content: text,
+        content: JSON.stringify(data),
+        data: data as ResumeData,
         source: 'uploaded',
         template: 'modern',
         createdAt: saved.createdAt,
         lastModified: saved.updatedAt,
       };
+
       saveResumes([...resumes, newResume]);
-      showNotification('success', 'Resume uploaded successfully!');
+      setSelectedResume(newResume);
+      setCurrentView('builder');
+      showNotification('success', 'Resume parsed! Review and edit your details below.');
     } catch (error) {
-      showNotification('error', 'Failed to upload resume');
+      showNotification('error', 'Failed to parse resume. Try a different file format.');
+    } finally {
+      setUploadParsing(false);
     }
   };
 
@@ -336,6 +366,7 @@ export default function CompleteResumeSystem({ intakeContext }: { intakeContext?
             setSearchQuery={setSearchQuery}
             startNewResume={startNewResume}
             handleFileUpload={handleFileUpload}
+            uploadParsing={uploadParsing}
             deleteResume={deleteResume}
             duplicateResume={duplicateResume}
             editResume={editResume}
@@ -485,12 +516,13 @@ function TemplatesView({ createFromTemplate, goBack }: { createFromTemplate: (te
 }
 
 // Library View Component
-function LibraryView({ 
-  resumes, 
-  searchQuery, 
-  setSearchQuery, 
-  startNewResume, 
+function LibraryView({
+  resumes,
+  searchQuery,
+  setSearchQuery,
+  startNewResume,
   handleFileUpload,
+  uploadParsing,
   deleteResume,
   duplicateResume,
   editResume,
@@ -502,6 +534,7 @@ function LibraryView({
   setSearchQuery: (query: string) => void;
   startNewResume: () => void;
   handleFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+  uploadParsing: boolean;
   deleteResume: (id: number) => void;
   duplicateResume: (resume: Resume) => void;
   editResume: (resume: Resume) => void;
@@ -525,13 +558,26 @@ function LibraryView({
         </div>
         
         <div className="flex gap-3">
-          <label className="px-6 py-3 bg-white border-2 border-blue-600 text-blue-600 rounded-xl font-semibold hover:bg-blue-50 transition-all cursor-pointer flex items-center gap-2">
-            <Upload className="w-5 h-5" />
-            Upload Resume
+          <label className={`px-6 py-3 bg-white border-2 border-blue-600 text-blue-600 rounded-xl font-semibold transition-all flex items-center gap-2 ${uploadParsing ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-50 cursor-pointer'}`}>
+            {uploadParsing ? (
+              <>
+                <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Parsing…
+              </>
+            ) : (
+              <>
+                <Upload className="w-5 h-5" />
+                Upload Resume
+              </>
+            )}
             <input
               type="file"
               accept=".txt,.pdf,.doc,.docx"
               onChange={handleFileUpload}
+              disabled={uploadParsing}
               className="hidden"
             />
           </label>
@@ -564,10 +610,22 @@ function LibraryView({
               <Plus className="w-4 h-4" />
               Build a resume
             </button>
-            <label className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all inline-flex items-center gap-2 text-sm cursor-pointer">
-              <Upload className="w-4 h-4" />
-              Upload existing
-              <input type="file" accept=".txt,.pdf,.doc,.docx" onChange={handleFileUpload} className="hidden" />
+            <label className={`px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-semibold transition-all inline-flex items-center gap-2 text-sm ${uploadParsing ? 'opacity-60 cursor-not-allowed' : 'hover:bg-gray-50 cursor-pointer'}`}>
+              {uploadParsing ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Parsing…
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  Upload existing
+                </>
+              )}
+              <input type="file" accept=".txt,.pdf,.doc,.docx" onChange={handleFileUpload} disabled={uploadParsing} className="hidden" />
             </label>
           </div>
         </div>

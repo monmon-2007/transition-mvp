@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import { AuthProvider, AuthGate } from "../components/auth/AuthProvider";
 import Header from "../components/Header";
+import PostHogProvider from "../components/PostHogProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -88,12 +89,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <Suspense fallback={<div />}>
-            <AuthGate>
-              <Header />
-              {children}
-            </AuthGate>
-          </Suspense>
+          <PostHogProvider>
+            <Suspense fallback={<div />}>
+              <AuthGate>
+                <Header />
+                {children}
+              </AuthGate>
+            </Suspense>
+          </PostHogProvider>
         </AuthProvider>
       </body>
     </html>

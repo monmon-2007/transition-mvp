@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import posthog from "posthog-js";
 import {
   fetchLayoffIntake,
   saveLayoffIntake,
@@ -506,6 +507,11 @@ export default function LayoffOnboarding() {
       setError(null);
 
       await saveLayoffIntake(final, "completed");
+
+      posthog.capture("intake_completed", {
+        has_severance: final.severanceOffered === "yes",
+        employment_type: final.employmentType,
+      });
 
       // After completing intake, go to situation summary first
       router.push("/onboarding/layoff/summary");
@@ -1656,7 +1662,7 @@ export default function LayoffOnboarding() {
           </div>
 
           {/* Navigation Footer */}
-          <div className="px-8 py-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+          <div className="px-4 sm:px-8 py-4 sm:py-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
             <button
               onClick={back}
               disabled={step === 1}

@@ -1428,41 +1428,41 @@ export default function CareerTransitionDashboard(): React.ReactElement {
     <div className="min-h-screen bg-gray-50">
       {/* Combined sticky header + nav */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto px-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
           {/* Top bar */}
-          <div className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-3">
-              <span className="text-blue-600 font-semibold text-base">Transition</span>
-              <span className="text-gray-300 text-sm">·</span>
-              <span className="text-sm text-gray-500">
+          <div className="flex items-center justify-between py-2.5 sm:py-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-blue-600 font-semibold text-sm sm:text-base flex-shrink-0">Transition</span>
+              <span className="text-gray-300 text-sm hidden sm:inline">·</span>
+              <span className="text-xs sm:text-sm text-gray-500 truncate hidden sm:block">
                 {layoffData?.lastRole ?? "Your role"} at {layoffData?.lastCompany ?? "your company"}
               </span>
               {weeksSinceLayoff > 0 && (
-                <span className="hidden sm:inline text-xs text-gray-400">
+                <span className="hidden lg:inline text-xs text-gray-400">
                   · Week {weeksSinceLayoff}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <Link
                 href="/onboarding/layoff/summary"
-                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors hidden sm:inline"
               >
                 Situation summary
               </Link>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-100 text-sm font-semibold text-blue-600">
+              <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-blue-50 border border-blue-100 text-sm font-semibold text-blue-600">
                 {progress}%
               </span>
             </div>
           </div>
 
-          {/* Nav tabs */}
-          <div className="flex gap-0">
+          {/* Nav tabs — horizontally scrollable on mobile */}
+          <div className="flex gap-0 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`px-3 sm:px-5 py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0 ${
                   activeTab === tab.id
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
@@ -1476,7 +1476,7 @@ export default function CareerTransitionDashboard(): React.ReactElement {
       </header>
 
       {/* Content */}
-      <main className="max-w-5xl mx-auto px-6 py-8 pb-20">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-20">
 
         {/* ── Overview ── */}
         {activeTab === "overview" && (
