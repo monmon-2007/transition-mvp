@@ -59,7 +59,7 @@ export const metadata: Metadata = {
       "From laid off to focused. A personalized action plan for your severance, benefits, finances, and job search — built around your situation.",
     images: [
       {
-        url: "/opengraph-image",
+        url: `${APP_URL}/og-image.png`,
         width: 1200,
         height: 630,
         alt: "NovaPivots — Your Career Transition Plan",
@@ -71,7 +71,7 @@ export const metadata: Metadata = {
     title: "NovaPivots — Your Career Transition Plan",
     description:
       "From laid off to focused. A personalized action plan for your severance, benefits, finances, and job search.",
-    images: ["/og-image.png"],
+    images: [`${APP_URL}/og-image.png`],
   },
   alternates: {
     canonical: APP_URL,
