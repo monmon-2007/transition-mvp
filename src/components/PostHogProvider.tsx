@@ -9,12 +9,16 @@ const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY || "phc_PLACEHOLDER_REPL
 const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
 
 if (typeof window !== "undefined" && POSTHOG_KEY !== "phc_PLACEHOLDER_REPLACE_WITH_YOUR_KEY") {
+  const consent = localStorage.getItem("novapivots:cookie-consent");
   posthog.init(POSTHOG_KEY, {
     api_host: POSTHOG_HOST,
     person_profiles: "identified_only",
     capture_pageview: false, // We track manually below
     capture_pageleave: true,
+    opt_out_capturing_by_default: consent !== "accepted",
   });
+  // If user previously accepted, opt in
+  if (consent === "accepted") posthog.opt_in_capturing();
 }
 
 function PageviewTracker() {

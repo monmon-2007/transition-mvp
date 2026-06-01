@@ -10,13 +10,17 @@
     "tailwind:init": "tailwindcss init -p"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.55.0",
     "@tailwindcss/cli": "^4.1.18",
+    "isomorphic-dompurify": "^3.15.0",
     "lucide-react": "^0.564.0",
     "next": "16.1.6",
     "next-auth": "^4.24.13",
     "posthog-js": "^1.369.3",
     "react": "^19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "ts-jobspy": "^2.0.3",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

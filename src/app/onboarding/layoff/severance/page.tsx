@@ -7,8 +7,12 @@ import { fetchLayoffIntake, LayoffIntakeApiResponse } from "@/lib/api/layoffInta
 import type { NegotiationAnswers, NegotiationContext } from "@/app/api/generate-negotiation-email/route";
 import {
   ArrowLeft, ArrowRight, Clock, CheckCircle2,
-  Circle, Copy, Check, RotateCcw, ChevronDown,
+  Circle, Copy, Check, RotateCcw, ChevronDown, FileDown,
 } from "lucide-react";
+import { computeFairnessScore, inferRoleLevel, type FairnessResult } from "@/lib/severanceBenchmark";
+import SeveranceFairnessScore from "@/components/SeveranceFairnessScore";
+import SeveranceExportView from "@/components/SeveranceExportView";
+import { parseDollarAmount } from "@/lib/runway";
 
 /* ─── Types ─── */
 type Step = "questions" | "generating" | "result";
@@ -121,6 +125,35 @@ export default function SeverancePage() {
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+
+  // A2: Auto-populate goals based on intake analysis data
+  useEffect(() => {
+    if (!intake) return;
+    const autoGoals: string[] = [];
+    const amt = parseDollarAmount(intake.severanceAmount);
+    if (amt) {
+      const score = computeFairnessScore({
+        severanceAmount: amt,
+        roleLevel: inferRoleLevel(intake.jobTitle),
+        industry: "technology",
+        hasNonCompete: intake.nonCompete === "yes",
+        hasReleaseOfClaims: intake.releaseRequired === "yes",
+      });
+      if (score && (score.rating === "below" || score.rating === "fair")) {
+        autoGoals.push("additional-weeks");
+      }
+    }
+    if (intake.nonCompete === "yes") autoGoals.push("non-compete-removal");
+    if (intake.releaseRequired === "yes") autoGoals.push("positive-reference");
+    if (intake.healthActive === "yes" || intake.cobraMentioned === "yes") autoGoals.push("extended-benefits");
+    if (autoGoals.length > 0) {
+      setAnswers((prev) => ({
+        ...prev,
+        goals: prev.goals.length === 0 ? autoGoals : prev.goals,
+      }));
+    }
+  }, [intake]);
 
   useEffect(() => {
     if (sessionStatus === "loading") return;
@@ -222,6 +255,20 @@ export default function SeverancePage() {
   const deadline = daysUntilDate(intake.severanceSignDeadline);
   const assessment = step === "result" ? computeAssessment(answers, intake) : null;
 
+  // Fairness score
+  const fairnessScore: FairnessResult | null = (() => {
+    const amt = parseDollarAmount(intake.severanceAmount);
+    if (!amt) return null;
+    return computeFairnessScore({
+      severanceAmount: amt,
+      roleLevel: inferRoleLevel(intake.jobTitle),
+      industry: "technology",
+      state: intake.governingLaw?.toUpperCase().trim().slice(0, 2) || undefined,
+      hasNonCompete: intake.nonCompete === "yes",
+      hasReleaseOfClaims: intake.releaseRequired === "yes",
+    });
+  })();
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -233,7 +280,18 @@ export default function SeverancePage() {
           >
             <ArrowLeft className="w-4 h-4" /> Back to summary
           </Link>
-          <span className="text-blue-600 font-semibold text-sm">Transition</span>
+          <div className="flex items-center gap-3">
+            {intake?.severanceAmount && (
+              <button
+                onClick={() => setShowExport(true)}
+                className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                Export for lawyer
+              </button>
+            )}
+            <span className="text-blue-600 font-semibold text-sm">Transition</span>
+          </div>
         </div>
       </header>
 
@@ -248,6 +306,13 @@ export default function SeverancePage() {
             Many severance packages have flexibility that isn't proactively offered. This walkthrough helps you assess your situation and, if it makes sense, draft a professional email to explore your options.
           </p>
         </div>
+
+        {/* Fairness Score */}
+        {fairnessScore && (
+          <div className="mb-8">
+            <SeveranceFairnessScore result={fairnessScore} />
+          </div>
+        )}
 
         {/* Situation snapshot */}
         <div className="bg-white border border-gray-200 rounded-xl p-5 mb-8">
@@ -501,7 +566,7 @@ export default function SeverancePage() {
             {/* Navigation */}
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
-                href="/onboarding/layoff/tasks"
+                href="/onboarding/layoff/dashboard"
                 className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-colors text-sm"
               >
                 Back to action plan <ArrowRight className="w-4 h-4" />
@@ -516,6 +581,15 @@ export default function SeverancePage() {
           </div>
         )}
       </main>
+
+      {/* Export Modal */}
+      {showExport && intake && (
+        <SeveranceExportView
+          intake={intake}
+          fairness={fairnessScore}
+          onClose={() => setShowExport(false)}
+        />
+      )}
     </div>
   );
 }

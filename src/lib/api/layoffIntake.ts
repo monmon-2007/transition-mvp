@@ -50,9 +50,12 @@ export interface LayoffIntakeApiResponse {
   cobraContributionDetails: string | null;
   proRatedBonus: string | null;
   proRatedBonusAmount: string | null;
+  hasEmergencyFund: string | null;
+  emergencyFundAmount: string | null;
   governingLaw: string | null;
   documentSummary: string | null;
   monthlyExpenses: number | null;
+  quickStartPath: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -108,9 +111,11 @@ export async function fetchLayoffIntake(): Promise<LayoffIntakeApiResponse | nul
  * User identity is determined server-side from the NextAuth session.
  * No user ID is sent from the browser.
  */
+export type IntakeStatus = "draft" | "quick-start" | "completed";
+
 export async function saveLayoffIntake(
   data: LayoffIntakeData,
-  status: "draft" | "completed"
+  status: IntakeStatus
 ): Promise<LayoffIntakeApiResponse> {
   const url = "/api/layoff-intake";
 
@@ -165,6 +170,8 @@ export async function saveLayoffIntake(
       cobraContributionDetails: data.cobraContributionDetails || null,
       proRatedBonus: data.proRatedBonus || null,
       proRatedBonusAmount: data.proRatedBonusAmount || null,
+      hasEmergencyFund: data.hasEmergencyFund || null,
+      emergencyFundAmount: data.emergencyFundAmount || null,
       governingLaw: data.governingLaw || null,
       documentSummary: data.documentSummary || null,
     // monthlyExpenses is not part of the intake form — saved separately
@@ -253,11 +260,57 @@ export function apiResponseToIntakeData(apiData: LayoffIntakeApiResponse): Layof
     cobraContributionDetails: apiData.cobraContributionDetails,
     proRatedBonus: apiData.proRatedBonus as any,
     proRatedBonusAmount: apiData.proRatedBonusAmount,
+    hasEmergencyFund: apiData.hasEmergencyFund as any,
+    emergencyFundAmount: apiData.emergencyFundAmount,
     governingLaw: apiData.governingLaw,
     documentSummary: apiData.documentSummary,
     createdAt: apiData.createdAt,
     updatedAt: apiData.updatedAt,
   };
+}
+
+/**
+ * Save a quick-start intake with minimal fields.
+ * Creates or updates the intake with status "quick-start".
+ */
+export async function saveQuickStartIntake(
+  fields: Partial<Record<string, string | number | null>>,
+  quickStartPath: "severance" | "finances" | "job-search" | "explore" | "general-search"
+): Promise<LayoffIntakeApiResponse> {
+  const payload = {
+    status: "quick-start",
+    quickStartPath,
+    ...fields,
+  };
+
+  const response = await fetch("/api/layoff-intake", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (response.status === 401) {
+    throw new Error("Please log in to save your intake");
+  }
+  if (!response.ok) {
+    throw new Error(`Failed to save quick-start intake: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Patch specific intake fields without overwriting others.
+ */
+export async function patchIntakeFields(
+  fields: Partial<Record<string, string | number | null>>
+): Promise<void> {
+  const res = await fetch("/api/layoff-intake/patch", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(fields),
+  });
+  if (!res.ok) throw new Error("Failed to patch intake fields");
 }
 
 /**

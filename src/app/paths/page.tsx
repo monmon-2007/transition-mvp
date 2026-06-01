@@ -7,7 +7,7 @@ export default function CareerPaths() {
 
   useEffect(() => {
     // Redirect to the main dashboard
-    router.replace("/onboarding/layoff/tasks");
+    router.replace("/onboarding/layoff/dashboard");
   }, [router]);
 
   return (

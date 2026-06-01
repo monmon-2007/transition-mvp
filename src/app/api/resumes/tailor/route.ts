@@ -3,8 +3,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { computeRunway } from "@/lib/runway";
 import { backendFetch } from "@/lib/backendClient";
+import { z } from "zod";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
+
+/* ─────────────────────────────────────────
+   Input validation
+───────────────────────────────────────── */
+const TailorRequestSchema = z.object({
+  resumeContent: z.string().min(1, "Resume content is required").max(20_000, "Resume content exceeds maximum length"),
+  resumeName: z.string().max(200).default("Resume"),
+  jobDescription: z.string().min(1, "Job description is required").max(10_000, "Job description exceeds maximum length"),
+});
 
 /* ─────────────────────────────────────────
    Rate limiter — 10 requests per user per minute (in-memory)
@@ -139,25 +149,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: TailorRequest;
+  let rawBody: unknown;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { resumeContent, resumeName, jobDescription } = body;
-  if (!resumeContent?.trim() || !jobDescription?.trim()) {
-    return NextResponse.json({ error: "resumeContent and jobDescription are required" }, { status: 400 });
+  const parsed = TailorRequestSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0]?.message || "Invalid input";
+    return NextResponse.json({ error: firstError }, { status: 400 });
   }
 
-  // Input length limits
-  if (resumeContent.length > 20_000) {
-    return NextResponse.json({ error: "Resume content exceeds maximum length" }, { status: 400 });
-  }
-  if (jobDescription.length > 10_000) {
-    return NextResponse.json({ error: "Job description exceeds maximum length" }, { status: 400 });
-  }
+  const { resumeContent, resumeName, jobDescription } = parsed.data;
 
   // Rate limit
   if (!checkRateLimit(userId)) {

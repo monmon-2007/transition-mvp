@@ -103,6 +103,14 @@ export function computeRunway(
     }
   }
 
+  // ── Emergency fund / savings ──
+  if (intake.hasEmergencyFund === "yes" && intake.emergencyFundAmount) {
+    const parsed = parseDollarAmount(intake.emergencyFundAmount);
+    if (parsed !== null && parsed > 0) {
+      components.push({ label: "Savings / Emergency fund", amount: parsed });
+    }
+  }
+
   // ── Bonus owed ──
   if (intake.bonusOwed === "yes" && intake.proRatedBonusAmount) {
     const parsed = parseDollarAmount(intake.proRatedBonusAmount);
@@ -127,6 +135,82 @@ export function computeRunway(
     riskLevel: riskLevel(runwayMonths),
     isEstimated,
   };
+}
+
+/**
+ * Project month-by-month runway for chart visualization.
+ * Each scenario returns an array of { month, remaining } pairs.
+ */
+export type RunwayProjection = {
+  month: number;
+  remaining: number;
+};
+
+export type RunwayScenario = {
+  label: string;
+  color: string;
+  data: RunwayProjection[];
+};
+
+export function projectRunway(
+  result: RunwayResult,
+  options?: {
+    cutExpensesPercent?: number;       // e.g. 20 = cut 20%
+    unemploymentWeekly?: number;       // weekly UI benefit
+    unemploymentWeeks?: number;        // how many weeks
+    additionalSeveranceWeeks?: number; // from negotiation
+    weeklySalary?: number;             // for converting severance weeks
+  }
+): RunwayScenario[] {
+  const maxMonths = Math.max(Math.ceil(result.runwayMonths * 1.5), 12);
+  const scenarios: RunwayScenario[] = [];
+
+  // Base scenario
+  const baseData: RunwayProjection[] = [];
+  let remaining = result.totalCash;
+  for (let m = 0; m <= maxMonths; m++) {
+    baseData.push({ month: m, remaining: Math.max(0, remaining) });
+    remaining -= result.monthlyExpenses;
+  }
+  scenarios.push({ label: "Current plan", color: "#6366f1", data: baseData });
+
+  // Cut expenses scenario
+  if (options?.cutExpensesPercent && options.cutExpensesPercent > 0) {
+    const cutExpenses = result.monthlyExpenses * (1 - options.cutExpensesPercent / 100);
+    const cutData: RunwayProjection[] = [];
+    remaining = result.totalCash;
+    for (let m = 0; m <= maxMonths; m++) {
+      cutData.push({ month: m, remaining: Math.max(0, remaining) });
+      remaining -= cutExpenses;
+    }
+    scenarios.push({ label: `Cut ${options.cutExpensesPercent}% expenses`, color: "#f59e0b", data: cutData });
+  }
+
+  // With unemployment benefits
+  if (options?.unemploymentWeekly && options?.unemploymentWeeks) {
+    const uiTotal = options.unemploymentWeekly * options.unemploymentWeeks;
+    const uiData: RunwayProjection[] = [];
+    remaining = result.totalCash + uiTotal;
+    for (let m = 0; m <= maxMonths; m++) {
+      uiData.push({ month: m, remaining: Math.max(0, remaining) });
+      remaining -= result.monthlyExpenses;
+    }
+    scenarios.push({ label: "+ Unemployment benefits", color: "#10b981", data: uiData });
+  }
+
+  // With additional severance
+  if (options?.additionalSeveranceWeeks && options?.weeklySalary) {
+    const extra = options.additionalSeveranceWeeks * options.weeklySalary;
+    const sevData: RunwayProjection[] = [];
+    remaining = result.totalCash + extra;
+    for (let m = 0; m <= maxMonths; m++) {
+      sevData.push({ month: m, remaining: Math.max(0, remaining) });
+      remaining -= result.monthlyExpenses;
+    }
+    scenarios.push({ label: "+ Negotiated severance", color: "#8b5cf6", data: sevData });
+  }
+
+  return scenarios;
 }
 
 export function formatCurrency(amount: number): string {

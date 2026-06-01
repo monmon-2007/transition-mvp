@@ -55,6 +55,10 @@ export type LayoffIntakeData = {
   bonusOwed?: YesNoUnsure | null;
   commissionOwed?: YesNoUnsure | null;
 
+  // Emergency fund / savings
+  hasEmergencyFund?: YesNoUnsure | null;
+  emergencyFundAmount?: string | null;
+
   // Benefits
   healthActive?: YesNoUnsure | null;
   healthEndDate?: string | null;
@@ -98,6 +102,83 @@ export type LayoffIntakeData = {
 };
 
 const STORAGE_KEY = "layoff_intake_v1";
+
+/** Strips non-numeric chars (except decimal point) and formats as currency on blur. */
+function CurrencyInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string | null | undefined;
+  onChange: (val: string | null) => void;
+  placeholder?: string;
+}) {
+  const [display, setDisplay] = useState(value ?? "");
+  const [focused, setFocused] = useState(false);
+
+  // Sync from parent when not focused (e.g. AI pre-fill)
+  useEffect(() => {
+    if (!focused) {
+      setDisplay(value ? formatForDisplay(value) : "");
+    }
+  }, [value, focused]);
+
+  function stripToNumeric(raw: string): string {
+    // Keep only digits and one decimal point
+    let result = "";
+    let hasDot = false;
+    for (const ch of raw) {
+      if (ch >= "0" && ch <= "9") {
+        result += ch;
+      } else if (ch === "." && !hasDot) {
+        hasDot = true;
+        result += ch;
+      }
+    }
+    return result;
+  }
+
+  function formatForDisplay(raw: string): string {
+    const numeric = stripToNumeric(raw);
+    if (!numeric) return "";
+    const num = parseFloat(numeric);
+    if (isNaN(num)) return numeric;
+    // Format with commas, up to 2 decimal places
+    return num.toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  return (
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
+        $
+      </span>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={display}
+        onFocus={() => {
+          setFocused(true);
+          // Show raw numeric on focus for easy editing
+          setDisplay(stripToNumeric(display));
+        }}
+        onChange={(e) => {
+          const cleaned = stripToNumeric(e.target.value);
+          setDisplay(cleaned);
+          onChange(cleaned || null);
+        }}
+        onBlur={() => {
+          setFocused(false);
+          setDisplay(formatForDisplay(display));
+        }}
+        placeholder={placeholder ?? "0"}
+        className="w-full pl-7 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+      />
+    </div>
+  );
+}
 
 export default function LayoffOnboarding() {
   const router = useRouter();
@@ -1104,12 +1185,10 @@ export default function LayoffOnboarding() {
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       Severance Amount <span className="text-slate-400">(if known)</span>
                     </label>
-                    <input
-                      type="text"
-                      value={data.severanceAmount ?? ""}
-                      onChange={(e) => update("severanceAmount", e.target.value || null)}
-                      placeholder="e.g., $15,000 or 4 weeks salary"
-                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                    <CurrencyInput
+                      value={data.severanceAmount}
+                      onChange={(val) => update("severanceAmount", val)}
+                      placeholder="15000"
                     />
                   </div>
 
@@ -1189,14 +1268,40 @@ export default function LayoffOnboarding() {
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       Pro-Rated Bonus Amount <span className="text-slate-400">(if known)</span>
                     </label>
-                    <input
-                      type="text"
-                      value={data.proRatedBonusAmount ?? ""}
-                      onChange={(e) => update("proRatedBonusAmount", e.target.value || null)}
-                      placeholder="e.g., $5,000 or 3 months prorated"
-                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                    <CurrencyInput
+                      value={data.proRatedBonusAmount}
+                      onChange={(val) => update("proRatedBonusAmount", val)}
+                      placeholder="5000"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Do you have savings or an emergency fund?
+                    </label>
+                    <select
+                      value={(data.hasEmergencyFund as YesNoUnsure) ?? "unsure"}
+                      onChange={(e) => update("hasEmergencyFund", e.target.value as YesNoUnsure)}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow bg-white"
+                    >
+                      <option value="unsure">Prefer not to say</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                    </select>
+                  </div>
+
+                  {data.hasEmergencyFund === "yes" && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Approximately how much?
+                      </label>
+                      <CurrencyInput
+                        value={data.emergencyFundAmount}
+                        onChange={(val) => update("emergencyFundAmount", val)}
+                        placeholder="10000"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             )}

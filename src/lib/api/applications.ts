@@ -57,10 +57,14 @@ export async function createApplication(payload: ApplicationCreatePayload): Prom
 }
 
 export async function updateApplication(id: number | string, payload: ApplicationUpdatePayload): Promise<ApplicationApiResponse> {
+  // Strip undefined values so the backend doesn't receive null for required fields
+  const cleaned = Object.fromEntries(
+    Object.entries(payload).filter(([, v]) => v !== undefined)
+  );
   const res = await fetch(`/api/applications/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(cleaned),
   });
   if (!res.ok) throw new Error("Failed to update application");
   return res.json();
