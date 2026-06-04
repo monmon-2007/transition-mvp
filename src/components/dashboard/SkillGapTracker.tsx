@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { Target, BookOpen, Check, Plus, X, ChevronDown, ChevronUp } from "lucide-react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { Target, BookOpen, Check, Plus, X, ChevronDown, ChevronUp, Sparkles, TrendingUp, Loader2, RefreshCw } from "lucide-react";
 
 type SkillEntry = {
   id: string;
@@ -18,15 +18,32 @@ type GapEntry = {
   resource?: string;
 };
 
+type TrendingSuggestion = {
+  skill: string;
+  category: "technical" | "tool" | "soft-skill" | "framework" | "methodology";
+  demand: "high" | "medium";
+  reason: string;
+};
+
+type CachedSuggestions = {
+  suggestions: TrendingSuggestion[];
+  generatedAt: string;
+  role: string;
+};
+
 const STORAGE_KEY_SKILLS = "novapivots:skills";
 const STORAGE_KEY_GAPS = "novapivots:skill-gaps";
+const STORAGE_KEY_TRENDING = "novapivots:trending-skills";
+const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
 
 export default function SkillGapTracker({
   resumeSkills,
   targetJobSkills,
+  targetRole,
 }: {
   resumeSkills?: string[];
   targetJobSkills?: string[];
+  targetRole?: string;
 }) {
   const [skills, setSkills] = useState<SkillEntry[]>([]);
   const [gaps, setGaps] = useState<GapEntry[]>([]);
@@ -34,7 +51,10 @@ export default function SkillGapTracker({
   const [showAddGap, setShowAddGap] = useState(false);
   const [newSkill, setNewSkill] = useState({ name: "", level: "intermediate" as SkillEntry["level"] });
   const [newGap, setNewGap] = useState({ skill: "", importance: "required" as GapEntry["importance"], resource: "" });
-  const [expandedSection, setExpandedSection] = useState<"skills" | "gaps" | null>("gaps");
+  const [expandedSection, setExpandedSection] = useState<"skills" | "gaps" | "trending" | null>("gaps");
+  const [trendingSuggestions, setTrendingSuggestions] = useState<TrendingSuggestion[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(false);
+  const [trendingCachedAt, setTrendingCachedAt] = useState<string | null>(null);
 
   // Load from localStorage
   useEffect(() => {
@@ -81,6 +101,87 @@ export default function SkillGapTracker({
       if (detectedGaps.length > 0) setGaps(detectedGaps);
     }
   }, [targetJobSkills, skills]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load cached trending suggestions
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(STORAGE_KEY_TRENDING);
+      if (cached) {
+        const parsed: CachedSuggestions = JSON.parse(cached);
+        const age = Date.now() - new Date(parsed.generatedAt).getTime();
+        if (age < TWO_WEEKS_MS && parsed.role === (targetRole || "")) {
+          setTrendingSuggestions(parsed.suggestions);
+          setTrendingCachedAt(parsed.generatedAt);
+        }
+      }
+    } catch { /* ignore */ }
+  }, [targetRole]);
+
+  const fetchTrendingSuggestions = useCallback(async (force = false) => {
+    const role = targetRole;
+    if (!role) return;
+
+    // Check cache unless forced
+    if (!force) {
+      try {
+        const cached = localStorage.getItem(STORAGE_KEY_TRENDING);
+        if (cached) {
+          const parsed: CachedSuggestions = JSON.parse(cached);
+          const age = Date.now() - new Date(parsed.generatedAt).getTime();
+          if (age < TWO_WEEKS_MS && parsed.role === role) return;
+        }
+      } catch { /* ignore */ }
+    }
+
+    setTrendingLoading(true);
+    try {
+      const res = await fetch("/api/skills/suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role,
+          existingSkills: skills.map((s) => s.name),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTrendingSuggestions(data.suggestions);
+        setTrendingCachedAt(data.generatedAt);
+        localStorage.setItem(STORAGE_KEY_TRENDING, JSON.stringify({
+          suggestions: data.suggestions,
+          generatedAt: data.generatedAt,
+          role,
+        }));
+      }
+    } catch { /* ignore */ }
+    setTrendingLoading(false);
+  }, [targetRole, skills]);
+
+  // Auto-fetch on mount if no cache
+  useEffect(() => {
+    if (targetRole && trendingSuggestions.length === 0 && !trendingLoading) {
+      fetchTrendingSuggestions();
+    }
+  }, [targetRole]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function addTrendingToGaps(suggestion: TrendingSuggestion) {
+    const id = `gap-trending-${suggestion.skill.toLowerCase().replace(/\s+/g, "-")}`;
+    if (gaps.some((g) => g.skill.toLowerCase() === suggestion.skill.toLowerCase())) return;
+    setGaps((prev) => [...prev, {
+      id,
+      skill: suggestion.skill,
+      importance: suggestion.demand === "high" ? "required" : "preferred",
+      status: "gap",
+    }]);
+  }
+
+  function trendingAge(): string {
+    if (!trendingCachedAt) return "";
+    const days = Math.floor((Date.now() - new Date(trendingCachedAt).getTime()) / (1000 * 60 * 60 * 24));
+    if (days === 0) return "Updated today";
+    if (days === 1) return "Updated yesterday";
+    return `Updated ${days}d ago`;
+  }
 
   const gapStats = useMemo(() => ({
     total: gaps.length,
@@ -312,6 +413,95 @@ export default function SkillGapTracker({
           </div>
         )}
       </div>
+
+      {/* Trending Skills (AI-powered) */}
+      {targetRole && (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <button
+            onClick={() => setExpandedSection(expandedSection === "trending" ? null : "trending")}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-violet-500" />
+              <span className="text-sm font-semibold text-gray-900">Trending Skills for {targetRole}</span>
+              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-600 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded-full leading-none">
+                <Sparkles className="w-2.5 h-2.5" /> AI
+              </span>
+            </div>
+            {expandedSection === "trending" ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+          </button>
+          {expandedSection === "trending" && (
+            <div className="px-4 pb-4 border-t border-gray-100">
+              {trendingLoading ? (
+                <div className="flex items-center gap-2 py-6 justify-center text-sm text-gray-400">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Analyzing market trends...
+                </div>
+              ) : trendingSuggestions.length === 0 ? (
+                <div className="text-center py-6">
+                  <p className="text-xs text-gray-400 mb-3">Get AI-powered skill suggestions based on current market trends.</p>
+                  <button
+                    onClick={() => fetchTrendingSuggestions(true)}
+                    className="text-xs bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700 transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <Sparkles className="w-3 h-3" /> Generate suggestions
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mt-3 mb-3">
+                    <span className="text-xs text-gray-400">{trendingAge()} &middot; Refreshes every 2 weeks</span>
+                    <button
+                      onClick={() => fetchTrendingSuggestions(true)}
+                      disabled={trendingLoading}
+                      className="text-xs text-violet-600 hover:text-violet-700 font-medium flex items-center gap-1 transition-colors disabled:opacity-50"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Refresh
+                    </button>
+                  </div>
+                  <div className="grid gap-2">
+                    {trendingSuggestions.map((s) => {
+                      const alreadyTracked = gaps.some((g) => g.skill.toLowerCase() === s.skill.toLowerCase()) ||
+                        skills.some((sk) => sk.name.toLowerCase() === s.skill.toLowerCase());
+                      return (
+                        <div key={s.skill} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-sm font-medium text-gray-900">{s.skill}</span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                s.demand === "high"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "bg-gray-100 text-gray-600"
+                              }`}>
+                                {s.demand === "high" ? "High demand" : "Growing"}
+                              </span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 capitalize">
+                                {s.category.replace("-", " ")}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 leading-relaxed">{s.reason}</p>
+                          </div>
+                          {alreadyTracked ? (
+                            <span className="text-xs text-emerald-600 font-medium shrink-0 mt-1">
+                              <Check className="w-3.5 h-3.5 inline" /> Tracked
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => addTrendingToGaps(s)}
+                              className="text-xs bg-violet-600 text-white px-3 py-1.5 rounded-lg hover:bg-violet-700 transition-colors shrink-0 mt-1 flex items-center gap-1"
+                            >
+                              <Plus className="w-3 h-3" /> Track
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

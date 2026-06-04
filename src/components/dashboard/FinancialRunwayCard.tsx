@@ -103,14 +103,14 @@ function FinancialRunwayCard({
   const MAX_BAR_MONTHS = 18;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6">
+    <div className="bg-white border border-gray-200 rounded-xl p-6 sm:p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
             Financial Runway
           </h2>
-          <p className="text-xs text-gray-400 mt-0.5">Estimate based on the inputs you provided</p>
+          <p className="text-xs text-gray-400 mt-1">Estimate based on the inputs you provided</p>
         </div>
         {runway && !editing && (
           <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${riskConfig[runway.riskLevel].badge}`}>
@@ -123,15 +123,16 @@ function FinancialRunwayCard({
       {/* Input state */}
       {editing ? (
         <div>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-gray-500 mb-3">
             Enter your estimated monthly expenses so we can calculate how long your funds will last.
           </p>
-          <p className="text-xs text-gray-400 mb-3">
+          <p className="text-xs text-gray-400 mb-4">
             Include: rent/mortgage, food, utilities, insurance, minimum debt payments.
           </p>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Monthly expenses</label>
           <div className="flex items-center gap-3">
-            <div className="relative flex-1 max-w-xs">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">$</span>
+            <div className="relative flex-1 max-w-sm">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">$</span>
               <input
                 type="text"
                 inputMode="numeric"
@@ -139,14 +140,14 @@ function FinancialRunwayCard({
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSave()}
                 placeholder="5,000"
-                className="w-full pl-7 pr-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-8 pr-4 py-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 autoFocus
               />
             </div>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60"
+              className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60"
             >
               {saving ? "Saving\u2026" : "Calculate"}
             </button>
@@ -177,7 +178,7 @@ function FinancialRunwayCard({
           </div>
 
           {/* Progress bar */}
-          <div className="mb-5">
+          <div className="mb-6">
             <div className="relative h-2.5 bg-gray-100 rounded-full overflow-hidden">
               <div
                 className={`absolute top-0 left-0 h-full rounded-full transition-all duration-700 ${riskConfig[runway.riskLevel].bar}`}
@@ -193,27 +194,27 @@ function FinancialRunwayCard({
           </div>
 
           {/* Breakdown */}
-          <div className="grid grid-cols-2 gap-3 mb-5">
+          <div className="grid grid-cols-2 gap-4 mb-6">
             {runway.components.map((c) => (
-              <div key={c.label} className="bg-gray-50 rounded-lg px-4 py-3">
-                <p className="text-xs text-gray-400 mb-0.5">{c.label}</p>
+              <div key={c.label} className="bg-gray-50 rounded-lg px-5 py-4">
+                <p className="text-xs text-gray-400 mb-1">{c.label}</p>
                 <p className="text-sm font-semibold text-gray-900">{formatCurrency(c.amount)}</p>
               </div>
             ))}
-            <div className="bg-gray-50 rounded-lg px-4 py-3">
-              <p className="text-xs text-gray-400 mb-0.5">Monthly expenses</p>
+            <div className="bg-gray-50 rounded-lg px-5 py-4">
+              <p className="text-xs text-gray-400 mb-1">Monthly expenses</p>
               <p className="text-sm font-semibold text-gray-900">{formatCurrency(runway.monthlyExpenses)}/mo</p>
             </div>
             {intake.ptoPayoutExpected === "yes" && (
-              <div className="bg-gray-50 rounded-lg px-4 py-3">
-                <p className="text-xs text-gray-400 mb-0.5">PTO payout</p>
+              <div className="bg-gray-50 rounded-lg px-5 py-4">
+                <p className="text-xs text-gray-400 mb-1">PTO payout</p>
                 <p className="text-sm font-semibold text-gray-500 italic">not included</p>
               </div>
             )}
           </div>
 
           {/* What this means for you */}
-          <div className={`rounded-lg px-4 py-4 mb-4 ${riskConfig[runway.riskLevel].panelBg}`}>
+          <div className={`rounded-lg px-5 py-5 mb-5 ${riskConfig[runway.riskLevel].panelBg}`}>
             <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${riskConfig[runway.riskLevel].textColor}`}>
               What this means for you
             </p>

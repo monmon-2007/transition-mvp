@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sendWelcomeEmail } from "@/lib/emails";
 
 async function sendVerificationEmail(email: string, token: string): Promise<void> {
   const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -99,6 +100,11 @@ export async function POST(request: NextRequest) {
       console.error("Verification email send failed:", emailErr);
       // Registration succeeded — user can request a resend
     }
+
+    // Send welcome email (non-blocking)
+    sendWelcomeEmail(data.email, body.name || "").catch((err: unknown) =>
+      console.error("Welcome email failed:", err)
+    );
 
     return NextResponse.json(
       { message: "Account created. Please check your email to verify your account." },

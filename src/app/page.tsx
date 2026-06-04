@@ -16,12 +16,26 @@ export default function Home() {
     "description": "NovaPivots is a career transition tool that generates a personalized action plan for people who have been laid off or are changing careers. It covers severance review, benefits transition, financial runway, job search tracking, and AI-powered resume tailoring.",
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Web",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD",
-      "description": "Free during beta"
-    },
+    "offers": [
+      {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Free plan with core features"
+      },
+      {
+        "@type": "Offer",
+        "price": "12",
+        "priceCurrency": "USD",
+        "description": "Pro plan — AI resume tailoring, cover letters, and unlimited applications"
+      },
+      {
+        "@type": "Offer",
+        "price": "29",
+        "priceCurrency": "USD",
+        "description": "Pro+ plan — Everything in Pro plus severance analysis, negotiation coaching, and priority support"
+      }
+    ],
     "audience": {
       "@type": "Audience",
       "audienceType": "People navigating layoffs, career transitions, or job searches"
@@ -49,13 +63,13 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Closed Beta Banner */}
+      {/* Launch Banner */}
       <div className="relative z-20 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white text-center py-2.5 px-4 text-sm font-medium">
         <span className="inline-flex items-center gap-2">
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          Free beta — limited to the first 100 members
-          <Link href={ctaHref} className="underline underline-offset-2 font-semibold hover:text-white/80 transition-colors">
-            Get early access →
+          Start free — upgrade anytime for AI-powered career tools
+          <Link href="/pricing" className="underline underline-offset-2 font-semibold hover:text-white/80 transition-colors">
+            See plans →
           </Link>
         </span>
       </div>
@@ -102,7 +116,7 @@ export default function Home() {
             onClick={() => posthog.capture('cta_clicked', { location: 'hero' })}
             className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-10 sm:px-14 py-4 sm:py-5 rounded-2xl text-lg sm:text-xl font-bold shadow-2xl shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-[1.03] transition-all duration-300"
           >
-            Build my plan — free
+            Build my plan
             <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
@@ -119,7 +133,7 @@ export default function Home() {
             </span>
             <span className="flex items-center gap-1">
               <svg className="w-3.5 h-3.5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-              Free during beta
+              Free plan available
             </span>
           </p>
         </div>
@@ -315,6 +329,124 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ─── PRICING ─── */}
+      <section id="pricing" className="px-4 sm:px-6 py-16 sm:py-24">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-14">
+            <p className="text-sm font-semibold text-violet-600 uppercase tracking-wider mb-3">Pricing</p>
+            <h2 className="text-3xl sm:text-5xl font-black text-gray-900 mb-4">
+              Simple plans, no surprises
+            </h2>
+            <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+              Start free. Upgrade when you need AI-powered tools to accelerate your search.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 items-start">
+            {/* Free */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-7 hover:shadow-lg transition-shadow">
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Free</h3>
+              <p className="text-sm text-gray-500 mb-5">Get organized and start your plan</p>
+              <div className="flex items-baseline gap-1 mb-6">
+                <span className="text-4xl font-black text-gray-900">$0</span>
+                <span className="text-gray-400 text-sm">/month</span>
+              </div>
+              <Link
+                href={ctaHref}
+                className="block w-full text-center py-2.5 rounded-xl border-2 border-gray-200 text-sm font-semibold text-gray-700 hover:border-violet-300 hover:text-violet-700 transition-colors mb-6"
+              >
+                Get started
+              </Link>
+              <ul className="space-y-3 text-sm text-gray-600">
+                {[
+                  'Personalized action plan',
+                  'Financial runway calculator',
+                  'Up to 10 job applications',
+                  '1 resume upload',
+                  'Task tracker',
+                  'Dark mode',
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-2">
+                    <svg className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Pro — highlighted */}
+            <div className="rounded-2xl border-2 border-violet-500 bg-white p-7 shadow-xl shadow-violet-100 relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                Most popular
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Pro</h3>
+              <p className="text-sm text-gray-500 mb-5">AI-powered tools to land interviews faster</p>
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-4xl font-black text-gray-900">$12</span>
+                <span className="text-gray-400 text-sm">/month</span>
+              </div>
+              <p className="text-xs text-violet-600 font-medium mb-6">7-day free trial included</p>
+              <Link
+                href="/pricing"
+                onClick={() => posthog.capture('pricing_cta_clicked', { tier: 'pro' })}
+                className="block w-full text-center py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-violet-500/20 hover:shadow-violet-500/40 transition-all mb-6"
+              >
+                Start free trial
+              </Link>
+              <ul className="space-y-3 text-sm text-gray-600">
+                {[
+                  'Everything in Free',
+                  'AI resume tailoring (unlimited)',
+                  'AI cover letter generation',
+                  'AI job match suggestions',
+                  'Unlimited applications',
+                  'Unlimited resumes',
+                  'Interview feedback tracker',
+                  'Skill gap analysis',
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-2">
+                    <svg className="w-4 h-4 text-violet-500 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Pro+ */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-7 hover:shadow-lg transition-shadow">
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Pro+</h3>
+              <p className="text-sm text-gray-500 mb-5">Full coaching suite for high-stakes transitions</p>
+              <div className="flex items-baseline gap-1 mb-6">
+                <span className="text-4xl font-black text-gray-900">$29</span>
+                <span className="text-gray-400 text-sm">/month</span>
+              </div>
+              <Link
+                href="/pricing"
+                onClick={() => posthog.capture('pricing_cta_clicked', { tier: 'pro_plus' })}
+                className="block w-full text-center py-2.5 rounded-xl border-2 border-violet-500 text-sm font-semibold text-violet-700 hover:bg-violet-50 transition-colors mb-6"
+              >
+                Get Pro+
+              </Link>
+              <ul className="space-y-3 text-sm text-gray-600">
+                {[
+                  'Everything in Pro',
+                  'AI severance analysis',
+                  'Offer negotiation coaching',
+                  'Negotiation email templates',
+                  'Salary benchmarking',
+                  'Priority support',
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-2">
+                    <svg className="w-4 h-4 text-violet-500 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── FINAL CTA ─── */}
       <section className="px-4 sm:px-6 py-20 sm:py-32 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-50 via-white to-indigo-50 pointer-events-none" />
@@ -325,7 +457,7 @@ export default function Home() {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-600">knowing where to start</span>
           </h2>
           <p className="text-xl text-gray-500 mb-10 max-w-xl mx-auto">
-            We&apos;ll figure that out for you. Free, private, and built around your actual situation.
+            We&apos;ll figure that out for you. Private and built around your actual situation.
           </p>
 
           <Link
@@ -333,14 +465,14 @@ export default function Home() {
             onClick={() => posthog.capture('cta_clicked', { location: 'bottom' })}
             className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-10 sm:px-14 py-5 sm:py-6 rounded-2xl text-xl sm:text-2xl font-bold shadow-2xl shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-[1.03] transition-all duration-300"
           >
-            Start my plan — it&apos;s free
+            Start my plan
             <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
           </Link>
 
           <p className="text-sm text-gray-400 mt-6">
-            Free forever during beta · No credit card · Your data stays private
+            Free plan available · No credit card required · Your data stays private
           </p>
         </div>
       </section>

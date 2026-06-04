@@ -5,14 +5,18 @@ import DOMPurify from "isomorphic-dompurify";
 import { fetchJobSuggestions, fetchJobDetail, type JobSuggestion, type JobDetail } from "@/lib/api/jobSuggestions";
 import {
   Sparkles, ExternalLink, Plus, MapPin, Building2, AlertCircle,
-  ChevronDown, ChevronUp, Clock, Briefcase, Users, Loader2,
+  ChevronDown, ChevronUp, Clock, Briefcase, Users, Loader2, Lock,
 } from "lucide-react";
+import Link from "next/link";
+import { useSubscription } from "@/hooks/useSubscription";
+import { ProBadge } from "@/components/UpgradePrompt";
 
 interface JobSuggestionsCardProps {
   onSave: (job: { company: string; role: string; jobLink: string }) => void;
 }
 
 export default function JobSuggestionsCard({ onSave }: JobSuggestionsCardProps) {
+  const { isPro, isProPlus, loading: subLoading } = useSubscription();
   const [suggestions, setSuggestions] = useState<JobSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,9 +90,10 @@ export default function JobSuggestionsCard({ onSave }: JobSuggestionsCardProps) 
   }
 
   const displayJobs = expanded ? suggestions : suggestions.slice(0, 5);
+  const isFreeUser = !isPro && !isProPlus && !subLoading;
 
   // Loading skeleton
-  if (loading) {
+  if (loading || subLoading) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 p-6">
         <div className="flex items-center gap-3 mb-5">
@@ -106,6 +111,75 @@ export default function JobSuggestionsCard({ onSave }: JobSuggestionsCardProps) 
           ))}
         </div>
         <p className="text-xs text-gray-400 mt-4 text-center">Finding jobs that match your profile...</p>
+      </div>
+    );
+  }
+
+  // Free-user teaser
+  if (isFreeUser) {
+    const fakeJobs = [
+      { role: "Senior Software Engineer", company: "Tech Corp", match: 92, location: "Remote" },
+      { role: "Staff Engineer", company: "Growth Inc", match: 87, location: "San Francisco, CA" },
+      { role: "Engineering Manager", company: "Scale AI", match: 81, location: "New York, NY" },
+    ];
+    return (
+      <div className="relative bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        {/* Header */}
+        <div className="px-6 pt-5 pb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-gray-900">Today&apos;s Jobs for You</h3>
+                <ProBadge plan="pro" />
+              </div>
+              <p className="text-xs text-gray-500">AI-matched jobs refreshed daily</p>
+            </div>
+          </div>
+        </div>
+        {/* Blurred teaser jobs */}
+        <div className="px-6 pb-5 space-y-2.5 relative">
+          {fakeJobs.map((job, i) => (
+            <div key={i} className="rounded-xl border border-gray-100 p-3.5 flex items-start gap-3 blur-[3px] select-none pointer-events-none">
+              <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                <Building2 className="w-5 h-5 text-gray-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-gray-900">{job.role}</p>
+                <p className="text-xs text-gray-500">{job.company}</p>
+                <div className="flex items-center gap-3 mt-1.5">
+                  <span className="text-xs text-gray-400 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />{job.location}
+                  </span>
+                </div>
+              </div>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200">
+                {job.match}% match
+              </span>
+            </div>
+          ))}
+          {/* Overlay CTA */}
+          <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
+            <div className="text-center max-w-sm">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-violet-100 mb-3">
+                <Lock className="w-5 h-5 text-violet-600" />
+              </div>
+              <h4 className="text-lg font-bold text-gray-900 mb-1">Unlock AI Job Matches</h4>
+              <p className="text-sm text-gray-500 mb-4">
+                Get personalized job suggestions matched to your skills and experience, refreshed daily.
+              </p>
+              <Link
+                href="/pricing"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-violet-500/20 hover:shadow-violet-500/40 transition-all"
+              >
+                <Sparkles className="w-4 h-4" />
+                Try Pro free for 7 days
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -139,7 +213,10 @@ export default function JobSuggestionsCard({ onSave }: JobSuggestionsCardProps) 
             <Sparkles className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Today&apos;s Jobs for You</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-bold text-gray-900">Today&apos;s Jobs for You</h3>
+              <ProBadge plan="pro" />
+            </div>
             <p className="text-xs text-gray-500">
               {suggestions.length} matches for &ldquo;{searchQuery}&rdquo;
               {generatedAt && <> &middot; {timeAgo(generatedAt)}</>}

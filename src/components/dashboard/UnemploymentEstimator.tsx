@@ -34,21 +34,21 @@ export default function UnemploymentEstimator({
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5">
-      <div className="flex items-center gap-2 mb-1">
+    <div className="bg-white border border-gray-200 rounded-xl p-6">
+      <div className="flex items-center gap-2.5 mb-1.5">
         <Landmark className="w-4 h-4 text-indigo-500" />
         <h3 className="text-sm font-semibold text-gray-900">Unemployment Benefits Estimator</h3>
       </div>
-      <p className="text-xs text-gray-400 mb-4">Estimate your state unemployment insurance benefits</p>
+      <p className="text-xs text-gray-400 mb-5">Estimate your state unemployment insurance benefits</p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
         {/* State */}
         <div>
-          <label className="block text-xs text-gray-500 mb-1">State</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">State</label>
           <select
             value={stateCode}
             onChange={(e) => setStateCode(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="">Select state</option>
             {STATE_OPTIONS.map((opt) => (
@@ -59,16 +59,16 @@ export default function UnemploymentEstimator({
 
         {/* Annual salary */}
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Prior annual salary</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Prior annual salary</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
             <input
               type="text"
               inputMode="numeric"
               value={salary}
               onChange={(e) => setSalary(e.target.value)}
               placeholder="120,000"
-              className="w-full pl-6 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-7 pr-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
         </div>
@@ -77,17 +77,17 @@ export default function UnemploymentEstimator({
       {/* Results */}
       {result && (
         <div>
-          <div className="grid grid-cols-3 gap-3 mb-3">
-            <div className="bg-indigo-50 rounded-lg p-3 text-center">
-              <p className="text-xs text-indigo-600 mb-0.5">Weekly</p>
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="bg-indigo-50 rounded-lg p-4 text-center">
+              <p className="text-xs text-indigo-600 mb-1">Weekly</p>
               <p className="text-base font-bold text-indigo-900">${result.weeklyBenefit}</p>
             </div>
-            <div className="bg-indigo-50 rounded-lg p-3 text-center">
-              <p className="text-xs text-indigo-600 mb-0.5">Duration</p>
+            <div className="bg-indigo-50 rounded-lg p-4 text-center">
+              <p className="text-xs text-indigo-600 mb-1">Duration</p>
               <p className="text-base font-bold text-indigo-900">{result.totalWeeks} wks</p>
             </div>
-            <div className="bg-indigo-50 rounded-lg p-3 text-center">
-              <p className="text-xs text-indigo-600 mb-0.5">Total</p>
+            <div className="bg-indigo-50 rounded-lg p-4 text-center">
+              <p className="text-xs text-indigo-600 mb-1">Total</p>
               <p className="text-base font-bold text-indigo-900">{formatCurrency(result.totalBenefit)}</p>
             </div>
           </div>

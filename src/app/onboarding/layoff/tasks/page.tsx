@@ -8,6 +8,7 @@ import { TaskCard } from "@/components/dashboard/TaskCard";
 import CelebrationToast from "@/components/CelebrationToast";
 import { getCelebration, type Celebration } from "@/lib/celebrations";
 import { ArrowLeft, Loader2, Plus, X } from "lucide-react";
+import { analytics } from "@/lib/analytics";
 
 const TIME_BUCKETS: { id: TimeBucket; label: string; description: string; dot: string; border: string; badge: string }[] = [
   {
@@ -68,6 +69,7 @@ function TasksPageContent() {
     if (status === "Done") {
       const task = displayTasks.find((t) => t.id === id);
       setCelebration(getCelebration(task?.category));
+      analytics.taskCompleted(task?.category || "unknown");
     }
   }
 

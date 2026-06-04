@@ -4,8 +4,12 @@ import React, { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import SkillGapTracker from "@/components/dashboard/SkillGapTracker";
+import { useDashboard } from "../shared/DashboardContext";
 
 export default function SkillsPage() {
+  const { intake } = useDashboard();
+  const targetRole = intake?.jobTitle || undefined;
+
   return (
     <Suspense
       fallback={
@@ -27,7 +31,7 @@ export default function SkillsPage() {
             Track your skills and identify gaps for your target roles.
           </p>
         </div>
-        <SkillGapTracker />
+        <SkillGapTracker targetRole={targetRole} />
       </div>
     </Suspense>
   );

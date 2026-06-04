@@ -63,9 +63,6 @@ export default function Header() {
           <span className="text-xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-transparent bg-clip-text">
             NovaPivots
           </span>
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-white bg-violet-500 px-1.5 py-0.5 rounded-full leading-none">
-            Beta
-          </span>
         </Link>
 
         {/* Desktop nav */}
@@ -111,6 +108,7 @@ export default function Header() {
                     <div className="py-2">
                       <Link href="/onboarding/layoff/dashboard" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">Dashboard</Link>
                       <Link href="/profile" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">Profile</Link>
+                      <Link href="/pricing" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">Plans & Billing</Link>
                       <Link href="/contact" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">Contact & Feedback</Link>
                       <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100 mt-2 pt-2">Sign out</button>
                     </div>

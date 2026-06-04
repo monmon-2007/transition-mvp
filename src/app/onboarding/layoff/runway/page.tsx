@@ -46,7 +46,7 @@ export default function RunwayPage() {
   const estimatedSalary = 120000; // default; could infer from role
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-8">
       {/* Main runway card */}
       <div className="relative">
         <FinancialRunwayCard
@@ -71,7 +71,7 @@ export default function RunwayPage() {
       )}
 
       {/* Calculators */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <UnemploymentEstimator
           defaultState={intake.governingLaw?.toUpperCase().trim().slice(0, 2)}
           defaultSalary={estimatedSalary}

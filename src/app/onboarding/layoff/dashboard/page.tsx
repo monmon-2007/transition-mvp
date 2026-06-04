@@ -28,6 +28,8 @@ import { parseDollarAmount } from "@/lib/runway";
 import { getDailyFocus } from "@/lib/dailyFocus";
 import TodaysFocusCard from "@/components/dashboard/TodaysFocusCard";
 import SocialProofBanner from "@/components/SocialProofBanner";
+import { ProBadge } from "@/components/UpgradePrompt";
+import { useSubscription } from "@/hooks/useSubscription";
 import CareerCoachCard from "@/components/dashboard/CareerCoachCard";
 import type { UserState } from "@/lib/careerCoach";
 import EmotionalJourneyCard from "@/components/dashboard/EmotionalJourneyCard";
@@ -108,6 +110,9 @@ export default function DashboardPage() {
     [displayTasks]
   );
 
+  const { isPro, isProPlus, loading: subLoading } = useSubscription();
+  const isFreeUser = !isPro && !isProPlus && !subLoading;
+
   // Career coach state
   const coachState: UserState = useMemo(() => ({
     weeksSinceLayoff,
@@ -144,6 +149,29 @@ export default function DashboardPage() {
       {/* ── Today's Focus ── */}
       <TodaysFocusCard focus={dailyFocus} />
 
+      {/* ── Free user upgrade banner ── */}
+      {isFreeUser && (
+        <Link href="/pricing" className="block group animate-fade-in-up">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-5 shadow-lg shadow-violet-500/30 transition-all group-hover:shadow-xl group-hover:shadow-violet-500/40">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_60%)]" />
+            <div className="relative flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-white text-sm">Unlock AI-powered tools</p>
+                  <p className="text-xs text-violet-100/80">Resume tailoring, job matches, cover letters, and more. Try Pro free for 7 days.</p>
+                </div>
+              </div>
+              <span className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold text-violet-600 bg-white px-4 py-2 rounded-lg shadow-sm group-hover:shadow-md transition-all">
+                Upgrade <ArrowRight className="w-3 h-3" />
+              </span>
+            </div>
+          </div>
+        </Link>
+      )}
+
       {/* ── Timeline (layoff-specific) ── */}
       {!isGeneralSearch && (
         <TimelineBanner weeksSinceLayoff={weeksSinceLayoff} timelinePhase={timelinePhase} />
@@ -162,19 +190,19 @@ export default function DashboardPage() {
       {/* ── Status Board ── */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Runway */}
-        <Link href="/onboarding/layoff/runway" className="group">
+        <Link href="/onboarding/layoff/runway" className="group animate-fade-in-up">
           <div
-            className={`relative overflow-hidden rounded-2xl p-5 h-full transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-xl ${
+            className={`relative overflow-hidden rounded-2xl p-5 h-full transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-2xl ${
               !runway
                 ? "bg-gradient-to-br from-slate-100 to-slate-50 shadow-sm"
                 : runway.riskLevel === "high"
-                ? "bg-gradient-to-br from-red-500 to-rose-600 shadow-lg shadow-red-200"
+                ? "bg-gradient-to-br from-red-500 to-rose-600 shadow-lg shadow-red-500/30"
                 : runway.riskLevel === "medium"
-                ? "bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-200"
-                : "bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-200"
+                ? "bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/30"
+                : "bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/30"
             }`}
           >
-            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/10 -translate-y-8 translate-x-8" />
+            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/10 -translate-y-8 translate-x-8 group-hover:scale-150 transition-transform duration-700" />
             <div className={`flex items-center gap-1.5 mb-3 ${runway ? "text-white/80" : "text-slate-500"}`}>
               <DollarSign className="w-4 h-4" />
               <span className="text-xs font-semibold uppercase tracking-wider">Runway</span>
@@ -189,9 +217,9 @@ export default function DashboardPage() {
         </Link>
 
         {/* Applications */}
-        <Link href="/onboarding/layoff/applications" className="group">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-fuchsia-600 p-5 shadow-lg shadow-purple-200 h-full transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-xl">
-            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/10 -translate-y-8 translate-x-8" />
+        <Link href="/onboarding/layoff/applications" className="group animate-fade-in-up delay-100">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-fuchsia-600 p-5 shadow-lg shadow-purple-500/30 h-full transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-2xl">
+            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/10 -translate-y-8 translate-x-8 group-hover:scale-150 transition-transform duration-700" />
             <div className="flex items-center gap-1.5 mb-3 text-white/80">
               <Briefcase className="w-4 h-4" />
               <span className="text-xs font-semibold uppercase tracking-wider">Applied</span>
@@ -204,9 +232,9 @@ export default function DashboardPage() {
         </Link>
 
         {/* Progress */}
-        <Link href="/onboarding/layoff/tasks" className="group">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-5 shadow-lg shadow-slate-300 h-full transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-xl">
-            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/5 -translate-y-8 translate-x-8" />
+        <Link href="/onboarding/layoff/tasks" className="group animate-fade-in-up delay-200">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-5 shadow-lg shadow-slate-500/20 h-full transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-2xl">
+            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/5 -translate-y-8 translate-x-8 group-hover:scale-150 transition-transform duration-700" />
             <div className="flex items-center gap-1.5 mb-3 text-slate-400">
               <ClipboardList className="w-4 h-4" />
               <span className="text-xs font-semibold uppercase tracking-wider">Progress</span>
@@ -280,8 +308,9 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-3">
             {/* Hero action */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-6 shadow-lg shadow-violet-200">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-6 shadow-lg shadow-violet-500/30 animate-fade-in-up">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_60%)]" />
+              <div className="absolute -bottom-4 -right-4 w-32 h-32 rounded-full bg-white/5 animate-float" />
               <div className="relative">
                 <div className="inline-flex items-center gap-1.5 text-violet-200 text-xs font-semibold uppercase tracking-wider mb-2">
                   <Sparkles className="w-3.5 h-3.5" /> Recommended
@@ -401,6 +430,7 @@ export default function DashboardPage() {
             hoverShadow="hover:shadow-blue-100"
             badge={resumes.length > 0 ? `${resumes.length}` : undefined}
             badgeClass="bg-blue-100 text-blue-700"
+            proBadge="pro"
           />
           <ToolCard
             icon={<Briefcase className="w-5 h-5" />}
@@ -428,16 +458,17 @@ export default function DashboardPage() {
               iconColor="text-rose-600"
               hoverBorder="hover:border-rose-300"
               hoverShadow="hover:shadow-rose-100"
+              proBadge="pro_plus"
             />
           )}
           {!isGeneralSearch && (
             <button
               onClick={() => setShowLegalRights(true)}
-              className="group relative overflow-hidden bg-white border border-gray-200 rounded-2xl p-5 transition-all duration-300 hover:border-amber-300 hover:shadow-amber-100 hover:shadow-lg hover:-translate-y-0.5 text-left"
+              className="group relative overflow-hidden bg-white border border-gray-200 rounded-2xl p-5 transition-all duration-300 hover:border-amber-300 hover:shadow-amber-100 hover:shadow-xl hover:-translate-y-1 text-left"
             >
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-100 text-amber-600 transition-transform duration-300 group-hover:scale-110">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-100 text-amber-600 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-lg">
                   <Scale className="w-5 h-5" />
                 </div>
               </div>
@@ -447,11 +478,11 @@ export default function DashboardPage() {
           )}
           <button
             onClick={() => setShowCareerTools(true)}
-            className="group relative overflow-hidden bg-white border border-gray-200 rounded-2xl p-5 transition-all duration-300 hover:border-cyan-300 hover:shadow-cyan-100 hover:shadow-lg hover:-translate-y-0.5 text-left"
+            className="group relative overflow-hidden bg-white border border-gray-200 rounded-2xl p-5 transition-all duration-300 hover:border-cyan-300 hover:shadow-cyan-100 hover:shadow-xl hover:-translate-y-1 text-left"
           >
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-cyan-100 text-cyan-600 transition-transform duration-300 group-hover:scale-110">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-cyan-100 text-cyan-600 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-lg">
                 <TrendingUp className="w-5 h-5" />
               </div>
             </div>
@@ -562,6 +593,7 @@ function ToolCard({
   hoverShadow,
   badge,
   badgeClass = "bg-gray-100 text-gray-600",
+  proBadge,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -575,24 +607,28 @@ function ToolCard({
   hoverShadow: string;
   badge?: string;
   badgeClass?: string;
+  proBadge?: "pro" | "pro_plus";
 }) {
   return (
     <Link
       href={href}
-      className={`group relative overflow-hidden bg-white border border-gray-200 rounded-2xl p-5 transition-all duration-300 ${hoverBorder} ${hoverShadow} hover:shadow-lg hover:-translate-y-0.5`}
+      className={`group relative overflow-hidden bg-white border border-gray-200 rounded-2xl p-5 transition-all duration-300 ${hoverBorder} ${hoverShadow} hover:shadow-xl hover:-translate-y-1`}
     >
       {/* Top gradient accent line */}
       <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${accentFrom} ${accentTo} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
 
       <div className="flex items-center justify-between mb-3">
-        <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${iconBg} ${iconColor} transition-transform duration-300 group-hover:scale-110`}>
+        <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${iconBg} ${iconColor} transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-lg`}>
           {icon}
         </div>
-        {badge && (
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${badgeClass}`}>
-            {badge}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {proBadge && <ProBadge plan={proBadge} />}
+          {badge && (
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${badgeClass}`}>
+              {badge}
+            </span>
+          )}
+        </div>
       </div>
       <h3 className="font-bold text-gray-900 mb-1 group-hover:text-gray-800">{title}</h3>
       <p className="text-sm text-gray-500 leading-relaxed">{description}</p>

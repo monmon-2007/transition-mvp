@@ -15,6 +15,9 @@ import JobSearchInsightCard from "./JobSearchInsightCard";
 import ApplicationKanban from "./ApplicationKanban";
 import { computeJDMatch, type JDMatchResult } from "@/lib/jdMatch";
 import JDMatchScore from "@/components/JDMatchScore";
+import { analytics } from "@/lib/analytics";
+import { useSubscription } from "@/hooks/useSubscription";
+import UpgradePrompt, { ProBadge, InlineUpgradePrompt } from "@/components/UpgradePrompt";
 
 const SalaryInsightCard = React.lazy(() => import("./SalaryInsightCard"));
 const InterviewPrepPanel = React.lazy(() => import("@/components/InterviewPrepPanel"));
@@ -44,9 +47,9 @@ function ApplicationsTab({
   const [activeTab, setActiveTab] = useState<"pipeline" | "discover" | "tools">("pipeline");
 
   const tabs = [
-    { id: "pipeline" as const, label: "Pipeline", icon: List, badge: applications.length > 0 ? applications.length : null },
-    { id: "discover" as const, label: "Discover", icon: Search, badge: null },
-    { id: "tools" as const, label: "Tools", icon: Wrench, badge: null },
+    { id: "pipeline" as const, label: "Pipeline", icon: List, badge: applications.length > 0 ? applications.length : null, pro: false },
+    { id: "discover" as const, label: "Discover", icon: Search, badge: null, pro: true },
+    { id: "tools" as const, label: "Tools", icon: Wrench, badge: null, pro: false },
   ];
 
   return (
@@ -74,6 +77,7 @@ function ApplicationsTab({
                     {tab.badge}
                   </span>
                 )}
+                {tab.pro && <ProBadge />}
               </span>
               {isActive && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-600 rounded-full" />
@@ -152,6 +156,7 @@ function PipelineView({
     difficulty: 3 as InterviewFeedback["difficulty"],
     wentWell: "", toImprove: "", questionsAsked: "",
   });
+  const { isPro, loading: subLoading } = useSubscription();
 
   useEffect(() => {
     if (highlightStale) {
@@ -234,6 +239,7 @@ function PipelineView({
       if (!res.ok) throw new Error("Failed");
       const data = await res.json();
       setCoverLetterText(data.coverLetter || "");
+      analytics.coverLetterGenerated(form.company);
     } catch {
       setCoverLetterText("Failed to generate. Please try again.");
     } finally {
@@ -261,6 +267,7 @@ function PipelineView({
       resumeId: form.resumeId ?? undefined,
       tailored: form.tailored,
     });
+    analytics.applicationAdded("applied");
     resetForm();
   }
 
@@ -768,11 +775,17 @@ function PipelineView({
                       onClick={() => setShowTailorPanel(true)}
                       className="flex items-center gap-1.5 text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors"
                     >
-                      <Wand2 className="w-3.5 h-3.5" /> Tailor resume for this job
+                      <Wand2 className="w-3.5 h-3.5" /> Tailor resume for this job <ProBadge />
                     </button>
+                  ) : !isPro && !subLoading ? (
+                    <div>
+                      <InlineUpgradePrompt feature="AI resume tailoring & cover letters" requiredPlan="pro" />
+                    </div>
                   ) : (
                     <div className="bg-violet-50 border border-violet-200 rounded-lg p-4">
-                      <p className="text-xs font-semibold text-violet-800 mb-2">Tailor &ldquo;{selectedResume.name}&rdquo; for this role</p>
+                      <p className="text-xs font-semibold text-violet-800 mb-2 flex items-center gap-2">
+                        Tailor &ldquo;{selectedResume.name}&rdquo; for this role <ProBadge />
+                      </p>
                       <textarea
                         value={tailorJd}
                         onChange={(e) => setTailorJd(e.target.value)}
@@ -791,6 +804,7 @@ function PipelineView({
                           className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-medium px-3 py-1.5 rounded-lg transition-colors">
                           {generatingCoverLetter ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
                           {generatingCoverLetter ? "Writing..." : "Cover letter"}
+                          <ProBadge />
                         </button>
                         <button type="button"
                           onClick={() => { setShowTailorPanel(false); setTailorJd(""); setTailorError(""); setCoverLetterText(""); setJdMatchResult(null); }}
@@ -858,6 +872,7 @@ function PipelineView({
 function DiscoverView({ onAdd }: {
   onAdd: (d: { company: string; role: string; jobLink?: string }) => void;
 }) {
+  const { isPro, loading: subLoading } = useSubscription();
   const [suggestions, setSuggestions] = useState<JobSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -915,6 +930,57 @@ function DiscoverView({ onAdd }: {
     if (score >= 70) return "text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200";
     if (score >= 50) return "text-amber-700 bg-amber-50 ring-1 ring-amber-200";
     return "text-gray-600 bg-gray-100 ring-1 ring-gray-200";
+  }
+
+  if (!subLoading && !isPro) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Jobs Matched to Your Resume</h3>
+            <p className="text-xs text-gray-500">AI scans real job postings and scores them against your skills</p>
+          </div>
+        </div>
+
+        {/* Blurred teaser cards */}
+        <div className="relative">
+          <div className="space-y-2.5 blur-[6px] pointer-events-none select-none" aria-hidden="true">
+            {[
+              { company: "TechCorp", role: "Senior Software Engineer", score: 87, salary: "$165k–$195k" },
+              { company: "DataFlow Inc", role: "Staff Engineer", score: 74, salary: "$180k–$220k" },
+              { company: "CloudScale", role: "Engineering Manager", score: 68, salary: "$175k–$210k" },
+            ].map((job) => (
+              <div key={job.role} className="bg-white border border-gray-100 rounded-xl p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{job.role}</p>
+                  <p className="text-xs text-gray-500">{job.company} · {job.salary}</p>
+                </div>
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">{job.score}% match</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Overlay CTA */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="bg-white/95 backdrop-blur-sm border border-violet-200 rounded-2xl p-6 text-center shadow-xl max-w-sm">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center mx-auto mb-3">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-1">Unlock AI Job Matches</h3>
+              <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+                See which jobs match your resume best — with keyword scores, missing skills, and 1-click apply tracking.
+              </p>
+              <a href="/pricing" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-violet-500/20 hover:shadow-violet-500/40 transition-all">
+                <Sparkles className="w-3.5 h-3.5" /> Try Pro free for 7 days
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (loading) {
@@ -1228,6 +1294,7 @@ function DiscoverView({ onAdd }: {
 
 function ToolsView() {
   const [activeTool, setActiveTool] = useState<"salary" | "offers" | "templates" | "negotiation" | null>(null);
+  const { isProPlus, loading: subLoading } = useSubscription();
 
   const tools = [
     {
@@ -1236,6 +1303,7 @@ function ToolsView() {
       description: "Research compensation ranges for your target roles and locations",
       icon: TrendingUp,
       color: "text-emerald-600 bg-emerald-50 border-emerald-200",
+      gated: false,
     },
     {
       id: "offers" as const,
@@ -1243,6 +1311,7 @@ function ToolsView() {
       description: "Side-by-side comparison of compensation packages to make informed decisions",
       icon: Scale,
       color: "text-blue-600 bg-blue-50 border-blue-200",
+      gated: false,
     },
     {
       id: "templates" as const,
@@ -1250,13 +1319,15 @@ function ToolsView() {
       description: "Professional templates for follow-ups, thank-yous, and negotiations",
       icon: Mail,
       color: "text-violet-600 bg-violet-50 border-violet-200",
+      gated: false,
     },
     {
       id: "negotiation" as const,
       label: "Negotiate Offers",
-      description: "Counter-offer templates, timing strategy, and negotiation playbook",
+      description: "AI counter-offer templates, timing strategy, and negotiation playbook",
       icon: Sparkles,
       color: "text-amber-600 bg-amber-50 border-amber-200",
+      gated: true,
     },
   ];
 
@@ -1278,7 +1349,10 @@ function ToolsView() {
               <div className={`w-10 h-10 rounded-lg border flex items-center justify-center mb-3 ${tool.color}`}>
                 <Icon className="w-5 h-5" />
               </div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-1">{tool.label}</h3>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-sm font-semibold text-gray-900">{tool.label}</h3>
+                {tool.gated && <ProBadge plan="pro_plus" />}
+              </div>
               <p className="text-xs text-gray-500 leading-relaxed">{tool.description}</p>
             </button>
           );
@@ -1293,7 +1367,11 @@ function ToolsView() {
         {activeTool === "salary" && <SalaryInsightCard onClose={() => setActiveTool(null)} />}
         {activeTool === "offers" && <OfferComparisonCalc onClose={() => setActiveTool(null)} />}
         {activeTool === "templates" && <EmailTemplateLibrary context={{}} onClose={() => setActiveTool(null)} />}
-        {activeTool === "negotiation" && <OfferNegotiationGuide onClose={() => setActiveTool(null)} />}
+        {activeTool === "negotiation" && (
+          !subLoading && !isProPlus
+            ? <UpgradePrompt feature="Offer Negotiation Coaching" requiredPlan="pro_plus" />
+            : <OfferNegotiationGuide onClose={() => setActiveTool(null)} />
+        )}
       </Suspense>
     </div>
   );

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { checkFeatureAccess } from "@/lib/checkSubscription";
 import { z } from "zod";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -36,6 +37,15 @@ export async function POST(request: NextRequest) {
     const userId = (session?.user as any)?.id;
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Subscription gate — requires Pro or higher
+    const access = await checkFeatureAccess("aiCoverLetter");
+    if (!access.allowed) {
+      return NextResponse.json(
+        { error: "UPGRADE_REQUIRED", requiredPlan: access.requiredPlan, message: "AI cover letter generation requires a Pro subscription" },
+        { status: 403 }
+      );
     }
 
     if (!checkRateLimit(userId)) {

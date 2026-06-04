@@ -13,6 +13,8 @@ import { computeFairnessScore, inferRoleLevel, type FairnessResult } from "@/lib
 import SeveranceFairnessScore from "@/components/SeveranceFairnessScore";
 import SeveranceExportView from "@/components/SeveranceExportView";
 import { parseDollarAmount } from "@/lib/runway";
+import { useSubscription } from "@/hooks/useSubscription";
+import UpgradePrompt from "@/components/UpgradePrompt";
 
 /* ─── Types ─── */
 type Step = "questions" | "generating" | "result";
@@ -82,6 +84,14 @@ function computeAssessment(answers: NegotiationAnswers, intake: LayoffIntakeApiR
     };
   }
 
+  if (shortTenure && answers.tenure === "<1 year") {
+    return {
+      headline: "Laid off shortly after joining — you may have more leverage than you think.",
+      body: `Being laid off within your first year is uniquely disruptive. You likely left a stable position to join this company, and that relocation risk is a real factor. Many companies recognize this and have informal policies to offer more generous terms to recently-hired employees affected by layoffs — especially if you relocated, turned down competing offers, or left unvested equity at your previous employer.`,
+      recommendation: "Frame your ask around the disruption: you accepted this role in good faith, left a stable position, and a bridge (extended severance, benefits, or outplacement support) is reasonable and fair.",
+    };
+  }
+
   if (shortTenure && broadLayoff) {
     return {
       headline: "Shorter tenures have less leverage, but a polite ask rarely hurts.",
@@ -126,6 +136,7 @@ export default function SeverancePage() {
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const { isProPlus, loading: subLoading } = useSubscription();
 
   // A2: Auto-populate goals based on intake analysis data
   useEffect(() => {
@@ -164,10 +175,6 @@ export default function SeverancePage() {
     fetchLayoffIntake().then((data) => {
       if (!data || data.status !== "completed") {
         router.replace("/onboarding");
-        return;
-      }
-      if (data.severanceOffered !== "yes") {
-        router.replace("/onboarding/layoff/summary");
         return;
       }
       setIntake(data);
@@ -248,6 +255,40 @@ export default function SeverancePage() {
           <div className="w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm text-gray-400">Loading your severance details…</p>
         </div>
+      </div>
+    );
+  }
+
+  // If user didn't receive a severance offer, show guidance instead of redirecting
+  if (intake.severanceOffered !== "yes") {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
+          <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+            <Link href="/onboarding/layoff/summary" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Back to summary
+            </Link>
+            <span className="text-blue-600 font-semibold text-sm">Transition</span>
+          </div>
+        </header>
+        <main className="max-w-3xl mx-auto px-6 py-10">
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-3">Severance Review</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3 leading-snug">No severance package on file</h1>
+          <p className="text-gray-500 text-sm leading-relaxed mb-6">
+            Based on your intake, you indicated that a severance package was not offered. If that has changed, you can update your intake and come back here.
+          </p>
+          <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
+            <h2 className="text-sm font-semibold text-gray-900">What you should know</h2>
+            <ul className="text-sm text-gray-600 space-y-3 leading-relaxed">
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" /> Severance is not legally required in most US states, but many employers offer it to get a clean release of claims.</li>
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" /> If you were laid off without severance, you may still want to ask — especially if you signed a non-compete or have IP concerns.</li>
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" /> File for unemployment benefits as soon as possible — there is usually a waiting period before payments begin.</li>
+            </ul>
+            <Link href="/onboarding" className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 mt-4">
+              Update my intake <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </main>
       </div>
     );
   }
@@ -355,10 +396,14 @@ export default function SeverancePage() {
         </div>
 
         {/* ── Questions ── */}
-        {(step === "questions" || step === "generating") && (
+        {!subLoading && !isProPlus && (step === "questions" || step === "generating" || step === "result") && (
+          <UpgradePrompt feature="AI Severance Negotiation" requiredPlan="pro_plus" />
+        )}
+        {(isProPlus || subLoading) && (step === "questions" || step === "generating") && (
           <div>
-            <h2 className="text-sm font-semibold text-gray-900 mb-5">
+            <h2 className="text-sm font-semibold text-gray-900 mb-5 flex items-center gap-2">
               A few quick questions
+              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-600 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded-full leading-none">Pro+</span>
             </h2>
 
             <div className="flex flex-col gap-6">
@@ -379,6 +424,29 @@ export default function SeverancePage() {
                   onChange={(v) => setAnswers({ ...answers, tenure: v })}
                 />
               </Question>
+
+              {/* Short-tenure guidance */}
+              {answers.tenure === "<1 year" && (
+                <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100 shrink-0 mt-0.5">
+                      <Clock className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-amber-900 mb-1">Laid off shortly after joining</p>
+                      <p className="text-xs text-amber-800/80 leading-relaxed mb-2">
+                        This situation is uniquely disruptive. You likely left a stable position to join — that&apos;s real leverage. Here&apos;s what to know:
+                      </p>
+                      <ul className="space-y-1.5 text-xs text-amber-800/70">
+                        <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">→</span> Many companies have informal policies for recently-hired employees caught in layoffs</li>
+                        <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">→</span> If you relocated, turned down competing offers, or left unvested equity — mention it</li>
+                        <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">→</span> Ask about outplacement services, extended job search time, or a bridge payment</li>
+                        <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">→</span> A reference letter matters more here since you have less to show for this stint</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Q2: Layoff type */}
               <Question
@@ -483,7 +551,7 @@ export default function SeverancePage() {
         )}
 
         {/* ── Result ── */}
-        {step === "result" && assessment && (
+        {isProPlus && step === "result" && assessment && (
           <div>
             {/* Assessment */}
             <div className="bg-white border border-blue-200 rounded-xl p-6 mb-6">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { checkFeatureAccess } from "@/lib/checkSubscription";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -61,6 +62,11 @@ function buildPrompt(ctx: NegotiationContext, answers: NegotiationAnswers): stri
       ? "This was a more targeted separation rather than a broad layoff."
       : "I'm not entirely clear on the scope of the layoff.";
 
+  const isShortTenure = answers.tenure === "<1 year";
+  const shortTenureNote = isShortTenure
+    ? `\n- IMPORTANT CONTEXT: They were laid off shortly after joining. They left a previous stable position to accept this role. This is a uniquely disruptive situation — frame the ask around the disruption of leaving a stable role, any relocation or competing offers declined, and the reasonable expectation that a bridge/additional support is fair given the circumstances.`
+    : "";
+
   return `Write a professional severance negotiation email for someone in the following situation. Write ONLY the email — nothing else. Start with "Subject:" on the first line.
 
 Situation:
@@ -71,13 +77,13 @@ ${ctx.releaseRequired === "yes" ? "- A release of claims is required to receive 
 ${ctx.nonCompete === "yes" ? `- A non-compete clause is included${ctx.governingLaw ? ` (governed by ${ctx.governingLaw} law)` : ""}` : ""}
 - ${layoffContext}
 - ${hrContext}
-- What they're hoping to achieve: ${goalsList || "an improved overall package"}
+- What they're hoping to achieve: ${goalsList || "an improved overall package"}${shortTenureNote}
 
 Requirements for the email:
 - Professional, warm, and non-confrontational
 - 200–280 words
 - Acknowledges appreciation for the support during the transition
-- References their tenure naturally without making it sound like a threat
+${isShortTenure ? "- Mentions that they made a significant career decision to join, framing the disruption as context for the ask" : "- References their tenure naturally without making it sound like a threat"}
 - Asks specifically for the goals listed above
 - Leaves room for dialogue — not an ultimatum
 - Does not use legal language or cite rights
@@ -104,25 +110,30 @@ function generateTemplateEmail(ctx: NegotiationContext, answers: NegotiationAnsw
     ? answers.goals.map((g) => `- ${goalDescriptions[g] || g}`).join("\n")
     : "- A review of the overall package terms";
 
+  const isRecentHire = answers.tenure === "<1 year";
   const tenureNote =
     answers.tenure === "5-10 years" || answers.tenure === "10+ years"
       ? `Given my ${answers.tenure} with the company, `
       : answers.tenure === "2-5 years"
       ? "Given my time with the company, "
+      : isRecentHire
+      ? "As someone who made a significant career decision to join the team — "
       : "";
 
   const deadline = ctx.severanceSignDeadline
     ? `\n\nI understand the agreement is due by ${ctx.severanceSignDeadline}, and I want to resolve this well before that date.`
     : "";
 
+  const recentHireParagraph = isRecentHire
+    ? `\nI want to acknowledge that my time at ${company} was brief, and that this situation is unexpected for all of us. I left a stable position to join the team because I believed in the mission and the opportunity, and I understand that business decisions sometimes overtake individual plans. ${tenureNote}I wanted to respectfully ask whether there is any flexibility in the current terms to help bridge this transition.\n`
+    : `\nAfter reviewing the agreement, ${tenureNote}I wanted to respectfully ask whether there is any flexibility in the current terms before I sign. I recognize this may not always be possible, and I raise it only as an open question rather than a condition.\n`;
+
   return `Subject: Request to Review Severance Terms — ${role} at ${company}
 
 Dear [HR Contact],
 
 I wanted to reach out regarding the separation agreement for my role as ${role} at ${company}. I genuinely appreciate the thoughtfulness with which the transition has been handled, and I am grateful for the opportunities I had during my time there.
-
-After reviewing the agreement, ${tenureNote}I wanted to respectfully ask whether there is any flexibility in the current terms before I sign. I recognize this may not always be possible, and I raise it only as an open question rather than a condition.
-
+${recentHireParagraph}
 Specifically, I was hoping we might explore:
 ${goalsText}${deadline}
 
@@ -139,6 +150,15 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions as any) as any;
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Subscription gate — requires Pro+
+  const access = await checkFeatureAccess("offerNegotiation");
+  if (!access.allowed) {
+    return NextResponse.json(
+      { error: "UPGRADE_REQUIRED", requiredPlan: access.requiredPlan, message: "Negotiation email generation requires a Pro+ subscription" },
+      { status: 403 }
+    );
   }
 
   let body: { context: NegotiationContext; answers: NegotiationAnswers };

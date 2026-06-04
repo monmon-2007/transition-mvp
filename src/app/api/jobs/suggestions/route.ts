@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { backendFetch } from "@/lib/backendClient";
+import { checkFeatureAccess } from "@/lib/checkSubscription";
 import { computeJDMatch } from "@/lib/jdMatch";
 import { scrapeJobs } from "ts-jobspy";
 
@@ -120,6 +121,15 @@ export async function GET(req: NextRequest) {
   const userId = (session?.user as any)?.id;
   if (!userId || typeof userId !== "string") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Subscription gate — requires Pro or higher
+  const access = await checkFeatureAccess("aiJobMatch");
+  if (!access.allowed) {
+    return NextResponse.json(
+      { error: "UPGRADE_REQUIRED", requiredPlan: access.requiredPlan, message: "AI job match suggestions require a Pro subscription" },
+      { status: 403 }
+    );
   }
 
   // Read preferences from query params

@@ -7,6 +7,7 @@ import {
   fetchLayoffIntake,
   saveLayoffIntake,
   apiResponseToIntakeData,
+  type IntakeStatus,
 } from "@/lib/api/layoffIntake";
 import {
   analyzeDocuments,
@@ -194,6 +195,8 @@ export default function LayoffOnboarding() {
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const loadedStatusRef = useRef<string | null>(null);
+  const initialLoadDoneRef = useRef(false);
 
   // Document analysis state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -230,6 +233,7 @@ export default function LayoffOnboarding() {
           }
 
           // Backend data exists but not completed - use it
+          loadedStatusRef.current = backendData.status;
           const intakeData = apiResponseToIntakeData(backendData);
           setData(intakeData);
           setFileMeta(intakeData.uploadedFiles || []);
@@ -265,6 +269,14 @@ export default function LayoffOnboarding() {
 
   // Autosave on data changes (localStorage + debounced backend draft)
   useEffect(() => {
+    // Don't autosave until initial data has loaded — prevents overwriting existing data with empty state
+    if (isLoading) return;
+    if (!initialLoadDoneRef.current) {
+      initialLoadDoneRef.current = true;
+      // Skip the first autosave after load — the data hasn't actually changed yet
+      return;
+    }
+
     const toSave: LayoffIntakeData = {
       uploadedFiles: fileMeta || [],
       employer: (data.employer ?? null) as string | null,
@@ -330,13 +342,17 @@ export default function LayoffOnboarding() {
 
       draftSaveTimeoutRef.current = setTimeout(async () => {
         try {
-          await saveLayoffIntake(toSave, "draft");
+          // Preserve the original status (e.g. "quick-start") instead of downgrading to "draft"
+          const saveStatus = (loadedStatusRef.current === "quick-start" || loadedStatusRef.current === "completed")
+            ? loadedStatusRef.current as IntakeStatus
+            : "draft";
+          await saveLayoffIntake(toSave, saveStatus);
         } catch (err) {
           console.warn("Failed to save draft to backend, localStorage still has a copy:", err);
         }
       }, 2000); // Debounce: save 2 seconds after last change
     }
-  }, [data, fileMeta, sessionStatus]);
+  }, [data, fileMeta, sessionStatus, isLoading]);
 
   // Cleanup draft save timeout on unmount
   useEffect(() => {

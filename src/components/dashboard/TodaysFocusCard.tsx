@@ -40,9 +40,9 @@ export default function TodaysFocusCard({ focus }: { focus: DailyFocus }) {
   const Icon = config.icon;
 
   const content = (
-    <div className={`${config.bg} ${config.border} border rounded-2xl p-5 transition-all duration-200 hover:shadow-md`}>
+    <div className={`group ${config.bg} ${config.border} border rounded-2xl p-5 transition-all duration-300 hover:shadow-lg animate-fade-in-up`}>
       <div className="flex items-start gap-4">
-        <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${config.iconBg} ${config.iconColor} flex-shrink-0`}>
+        <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${config.iconBg} ${config.iconColor} flex-shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg`}>
           <Icon className="w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0">
@@ -50,12 +50,13 @@ export default function TodaysFocusCard({ focus }: { focus: DailyFocus }) {
             <span className={`text-xs font-semibold uppercase tracking-wider ${config.labelColor}`}>
               {config.label}
             </span>
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-current animate-pulse" style={{ color: 'inherit' }} />
           </div>
           <h3 className="font-bold text-gray-900 text-base mb-1">{focus.title}</h3>
           <p className="text-sm text-gray-600 leading-relaxed">{focus.description}</p>
         </div>
         {focus.href && (
-          <ArrowRight className="w-4 h-4 text-gray-300 flex-shrink-0 mt-1" />
+          <ArrowRight className="w-4 h-4 text-gray-300 flex-shrink-0 mt-1 transition-all duration-300 group-hover:text-violet-500 group-hover:translate-x-1" />
         )}
       </div>
     </div>

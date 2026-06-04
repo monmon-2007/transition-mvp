@@ -42,10 +42,11 @@ export default function TimelineBanner({
   const progressPercent = Math.min(100, (weeksSinceLayoff / 12) * 100);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6 animate-fade-in-up">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r ${config.color} text-white text-sm font-semibold`}>
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r ${config.color} text-white text-sm font-semibold shadow-sm`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse" />
             Week {weeksSinceLayoff || 1}
           </span>
           <span className="text-sm text-gray-600">{config.advice}</span>
@@ -54,15 +55,15 @@ export default function TimelineBanner({
 
       {/* Progress bar */}
       <div className="relative mt-2 mb-3">
-        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
           <div
             className={`h-full bg-gradient-to-r ${config.color} rounded-full transition-all duration-700`}
             style={{ width: `${Math.max(progressPercent, 4)}%` }}
           />
         </div>
-        {/* Marker dot */}
+        {/* Marker dot with glow */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-gray-400 shadow-sm transition-all duration-700"
+          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-gray-400 shadow-md transition-all duration-700 animate-pulse-glow"
           style={{ left: `calc(${Math.max(progressPercent, 2)}% - 8px)` }}
         />
       </div>

@@ -1,11 +1,12 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   FileText, Upload, Plus, Trash2, Edit, Wand2, Download, Eye,
   FolderOpen, Search, MoreVertical, Copy, Save, X, Layout,
   Briefcase, GraduationCap, Award, MapPin, Mail, Phone, Globe,
   Calendar, Building, CheckCircle, AlertCircle, Sparkles, Target,
-  Palette, Code, Grid3x3, ChevronLeft, ChevronRight, Settings
+  Palette, Code, Grid3x3, ChevronLeft, ChevronRight, Settings,
+  TrendingUp,
 } from 'lucide-react';
 import {
   fetchResumes as apiFetchResumes,
@@ -13,6 +14,9 @@ import {
   updateResume as apiUpdate,
   deleteResume as apiDelete,
 } from '@/lib/api/resumes';
+import { analytics } from '@/lib/analytics';
+import { useSubscription } from '@/hooks/useSubscription';
+import UpgradePrompt from '@/components/UpgradePrompt';
 
 // Type Definitions
 interface PersonalInfo {
@@ -361,7 +365,7 @@ export default function CompleteResumeSystem({ intakeContext }: { intakeContext?
                   {currentView === 'library' && `${resumes.length} resume${resumes.length !== 1 ? 's' : ''}`}
                   {currentView === 'templates' && 'Choose a template'}
                   {currentView === 'builder' && 'Build your resume'}
-                  {currentView === 'tailor' && 'Tailor to job posting'}
+                  {currentView === 'tailor' && <span className="flex items-center gap-1.5">Tailor to job posting <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-600 bg-violet-50 border border-violet-200 px-1 py-0.5 rounded-full leading-none">Pro</span></span>}
                 </p>
               </div>
             </div>
@@ -686,6 +690,7 @@ function LibraryView({
                         </button>
                         <button onClick={() => { tailorResume(resume); setShowMenu(null); }} className="w-full px-3.5 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2.5 text-gray-700">
                           <Wand2 className="w-3.5 h-3.5" /> Tailor to Job
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-600 bg-violet-50 border border-violet-200 px-1 py-0.5 rounded-full leading-none ml-auto">Pro</span>
                         </button>
                         <button onClick={() => { downloadResume(resume); setShowMenu(null); }} className="w-full px-3.5 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2.5 text-gray-700">
                           <Download className="w-3.5 h-3.5" /> Download
@@ -942,6 +947,9 @@ function BuilderView({ resume, resumes, onSave, showNotification, goToLibrary }:
             <Save className="w-4 h-4" />
             Save to Library
           </button>
+
+          {/* Role Positioning Insight */}
+          <RolePositioningInsight resumeData={resumeData} />
         </div>
       </div>
 
@@ -1653,6 +1661,110 @@ function parseContentToResumeData(content: string): ResumeData {
 }
 
 /* ─────────────────────────────────────────
+   Role Positioning Insight
+───────────────────────────────────────── */
+function RolePositioningInsight({ resumeData }: { resumeData: ResumeData }) {
+  const insight = useMemo(() => {
+    if (!resumeData?.experience?.length) return null;
+
+    // Calculate total years of experience
+    let totalMonths = 0;
+    let hasLeadership = false;
+    let hasArchitecture = false;
+    let hasMentoring = false;
+
+    const leadershipKeywords = ['led', 'managed', 'directed', 'oversaw', 'spearheaded', 'drove', 'owned', 'head of', 'team lead', 'principal'];
+    const architectureKeywords = ['architect', 'designed system', 'system design', 'infrastructure', 'scaled', 'platform', 'technical strategy', 'technical direction'];
+    const mentoringKeywords = ['mentor', 'coached', 'onboarded', 'grew team', 'hired', 'recruiting', 'career development', 'training'];
+
+    resumeData.experience.forEach((exp) => {
+      if (exp.startDate) {
+        const start = new Date(exp.startDate);
+        const end = exp.current ? new Date() : (exp.endDate ? new Date(exp.endDate) : new Date());
+        totalMonths += Math.max(0, (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30));
+      }
+      const allText = [exp.position, ...exp.achievements].join(' ').toLowerCase();
+      if (leadershipKeywords.some((k) => allText.includes(k))) hasLeadership = true;
+      if (architectureKeywords.some((k) => allText.includes(k))) hasArchitecture = true;
+      if (mentoringKeywords.some((k) => allText.includes(k))) hasMentoring = true;
+    });
+
+    const totalYears = totalMonths / 12;
+    const currentTitle = resumeData.personalInfo.title?.toLowerCase() || '';
+
+    // Determine positioning advice
+    if (totalYears >= 10 && (hasLeadership || hasArchitecture) && hasMentoring) {
+      if (currentTitle.includes('senior') && !currentTitle.includes('staff') && !currentTitle.includes('principal') && !currentTitle.includes('director')) {
+        return {
+          level: 'upgrade' as const,
+          current: 'Senior',
+          suggested: 'Staff / Principal',
+          reason: `With ${Math.round(totalYears)}+ years, leadership experience, and system-level impact, you may qualify for Staff or Principal level roles.`,
+          tips: ['Emphasize cross-team or org-wide impact in your summary', 'Highlight architectural decisions and their business outcomes', 'Quantify team growth and mentoring results'],
+        };
+      }
+    }
+
+    if (totalYears >= 6 && (hasLeadership || hasArchitecture)) {
+      if (!currentTitle.includes('senior') && !currentTitle.includes('staff') && !currentTitle.includes('lead') && !currentTitle.includes('principal') && !currentTitle.includes('manager') && !currentTitle.includes('director')) {
+        return {
+          level: 'upgrade' as const,
+          current: 'Mid-level',
+          suggested: 'Senior',
+          reason: `With ${Math.round(totalYears)}+ years and demonstrated leadership, you likely qualify for Senior-level roles.`,
+          tips: ['Lead with impact metrics in your achievements', 'Add a summary highlighting senior-level ownership', 'Describe technical decisions, not just tasks'],
+        };
+      }
+    }
+
+    if (totalYears >= 3 && hasLeadership && hasArchitecture && hasMentoring) {
+      return {
+        level: 'strong' as const,
+        current: currentTitle ? currentTitle.charAt(0).toUpperCase() + currentTitle.slice(1) : 'Your level',
+        suggested: null,
+        reason: 'Your experience shows a strong mix of technical depth, leadership, and mentoring.',
+        tips: ['Keep quantifying impact — numbers speak loudest', 'Consider adding a "Technical Leadership" section'],
+      };
+    }
+
+    return null;
+  }, [resumeData]);
+
+  if (!insight) return null;
+
+  return (
+    <div className={`mt-4 rounded-xl border p-4 ${
+      insight.level === 'upgrade'
+        ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200'
+        : 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200'
+    }`}>
+      <div className="flex items-center gap-2 mb-2">
+        <TrendingUp className={`w-4 h-4 ${insight.level === 'upgrade' ? 'text-amber-600' : 'text-emerald-600'}`} />
+        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Role Positioning</span>
+      </div>
+      {insight.suggested ? (
+        <p className="text-sm font-semibold text-gray-900 mb-1">
+          Consider targeting <span className={insight.level === 'upgrade' ? 'text-amber-700' : 'text-emerald-700'}>{insight.suggested}</span> roles
+        </p>
+      ) : (
+        <p className="text-sm font-semibold text-gray-900 mb-1">
+          Strong positioning
+        </p>
+      )}
+      <p className="text-xs text-gray-600 leading-relaxed mb-2">{insight.reason}</p>
+      <ul className="space-y-1">
+        {insight.tips.map((tip, i) => (
+          <li key={i} className="text-xs text-gray-500 flex items-start gap-1.5">
+            <span className="mt-0.5 text-violet-500">→</span>
+            {tip}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
    PDF generation helpers (module-level, pure)
 ───────────────────────────────────────── */
 function esc(str: string): string {
@@ -1675,6 +1787,16 @@ function isMeta(line: string): boolean {
 }
 
 function buildResumeHtml(resume: Resume): string {
+  const templateColors: { [key: string]: { primary: string; secondary: string } } = {
+    modern: { primary: '#2563eb', secondary: '#64748b' },
+    executive: { primary: '#1e293b', secondary: '#475569' },
+    creative: { primary: '#a855f7', secondary: '#ec4899' },
+    minimal: { primary: '#374151', secondary: '#6b7280' },
+    tech: { primary: '#10b981', secondary: '#06b6d4' },
+    academic: { primary: '#f59e0b', secondary: '#dc2626' },
+  };
+  const colors = templateColors[resume.template || 'modern'] || templateColors.modern;
+
   let bodyHtml = '';
 
   const hasStructuredData =
@@ -1685,26 +1807,26 @@ function buildResumeHtml(resume: Resume): string {
 
   if (hasStructuredData && resume.data) {
     const d = resume.data;
-    const contactParts = [d.personalInfo.email, d.personalInfo.phone, d.personalInfo.location].filter(Boolean);
 
-    bodyHtml += `<div class="header">`;
-    if (d.personalInfo.name) bodyHtml += `<h1>${esc(d.personalInfo.name)}</h1>`;
-    if (d.personalInfo.title) bodyHtml += `<p class="subtitle">${esc(d.personalInfo.title)}</p>`;
+    // Header — matches preview layout
+    bodyHtml += `<div class="header" style="border-bottom: 4px solid ${colors.primary}; padding-bottom: 16px; margin-bottom: 16px;">`;
+    if (d.personalInfo.name) bodyHtml += `<h1 style="color: ${colors.primary};">${esc(d.personalInfo.name)}</h1>`;
+    if (d.personalInfo.title) bodyHtml += `<p class="subtitle" style="color: ${colors.secondary};">${esc(d.personalInfo.title)}</p>`;
+    const contactParts = [d.personalInfo.email, d.personalInfo.phone, d.personalInfo.location].filter(Boolean);
     if (contactParts.length) bodyHtml += `<p class="contact">${contactParts.map(esc).join(' &nbsp;·&nbsp; ')}</p>`;
     if (d.personalInfo.linkedin) bodyHtml += `<p class="contact">${esc(d.personalInfo.linkedin)}</p>`;
-    bodyHtml += `</div><hr class="header-rule">`;
+    bodyHtml += `</div>`;
 
     if (d.summary) {
-      bodyHtml += `<div class="section"><h2>Professional Summary</h2><p class="body-text">${esc(d.summary)}</p></div>`;
+      bodyHtml += `<div class="section"><h2 style="color: ${colors.primary};">Professional Summary</h2><p class="body-text">${esc(d.summary)}</p></div>`;
     }
 
     if (d.experience.length > 0) {
-      bodyHtml += `<div class="section"><h2>Experience</h2>`;
+      bodyHtml += `<div class="section"><h2 style="color: ${colors.primary};">Experience</h2>`;
       d.experience.forEach((exp) => {
-        const dates = `${esc(exp.startDate || '')} – ${exp.current ? 'Present' : esc(exp.endDate || '')}`;
         bodyHtml += `<div class="job">`;
-        bodyHtml += `<div class="job-header"><span class="job-title">${esc(exp.position || '')}</span><span class="dates">${dates}</span></div>`;
-        bodyHtml += `<p class="company">${esc(exp.company || '')}${exp.location ? ' &nbsp;·&nbsp; ' + esc(exp.location) : ''}</p>`;
+        bodyHtml += `<div class="job-header"><span class="job-title">${esc(exp.position || '')}</span><span class="dates">${esc(exp.location || '')}</span></div>`;
+        bodyHtml += `<div class="job-header"><p class="company" style="color: ${colors.secondary};">${esc(exp.company || '')}</p><span class="dates">${esc(exp.startDate || '')} – ${exp.current ? 'Present' : esc(exp.endDate || '')}</span></div>`;
         const bullets = exp.achievements.filter(Boolean);
         if (bullets.length) bodyHtml += `<ul>${bullets.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>`;
         bodyHtml += `</div>`;
@@ -1713,30 +1835,32 @@ function buildResumeHtml(resume: Resume): string {
     }
 
     if (d.education.length > 0) {
-      bodyHtml += `<div class="section"><h2>Education</h2>`;
+      bodyHtml += `<div class="section"><h2 style="color: ${colors.primary};">Education</h2>`;
       d.education.forEach((edu) => {
         bodyHtml += `<div class="edu">`;
         bodyHtml += `<p class="job-title">${esc(edu.degree || '')}${edu.field ? ' in ' + esc(edu.field) : ''}</p>`;
-        bodyHtml += `<p class="company">${esc(edu.school || '')}${edu.location ? ' · ' + esc(edu.location) : ''}${edu.graduationDate ? ' · ' + esc(edu.graduationDate) : ''}</p>`;
+        bodyHtml += `<p class="company" style="color: ${colors.secondary};">${esc(edu.school || '')}${edu.location ? ' · ' + esc(edu.location) : ''}${edu.graduationDate ? ' · ' + esc(edu.graduationDate) : ''}${edu.gpa ? ' · GPA: ' + esc(edu.gpa) : ''}</p>`;
         bodyHtml += `</div>`;
       });
       bodyHtml += `</div>`;
     }
 
     if (d.skills.length > 0) {
-      bodyHtml += `<div class="section"><h2>Skills</h2><p class="body-text">${d.skills.map(esc).join(' &nbsp;·&nbsp; ')}</p></div>`;
+      bodyHtml += `<div class="section"><h2 style="color: ${colors.primary};">Skills</h2>`;
+      bodyHtml += `<div class="skills-wrap">${d.skills.map((s) => `<span class="skill-tag" style="background: ${colors.primary}20; color: ${colors.primary};">${esc(s)}</span>`).join('')}</div>`;
+      bodyHtml += `</div>`;
     }
 
     if (d.certifications && d.certifications.length > 0) {
-      bodyHtml += `<div class="section"><h2>Certifications</h2><ul>${d.certifications.map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>`;
+      bodyHtml += `<div class="section"><h2 style="color: ${colors.primary};">Certifications</h2><ul>${d.certifications.map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>`;
     }
 
     if (d.projects && d.projects.length > 0) {
-      bodyHtml += `<div class="section"><h2>Projects</h2>`;
+      bodyHtml += `<div class="section"><h2 style="color: ${colors.primary};">Projects</h2>`;
       d.projects.forEach((proj) => {
         bodyHtml += `<div class="job">`;
         bodyHtml += `<p class="job-title">${esc(proj.name)}</p>`;
-        if (proj.technologies) bodyHtml += `<p class="company">${esc(proj.technologies)}</p>`;
+        if (proj.technologies) bodyHtml += `<p class="company" style="color: ${colors.secondary};">${esc(proj.technologies)}</p>`;
         if (proj.description) bodyHtml += `<p class="body-text">${esc(proj.description)}</p>`;
         bodyHtml += `</div>`;
       });
@@ -1744,7 +1868,7 @@ function buildResumeHtml(resume: Resume): string {
     }
 
     if (d.languages && d.languages.length > 0) {
-      bodyHtml += `<div class="section"><h2>Languages</h2><p class="body-text">${d.languages.map(esc).join(' &nbsp;·&nbsp; ')}</p></div>`;
+      bodyHtml += `<div class="section"><h2 style="color: ${colors.primary};">Languages</h2><p class="body-text">${d.languages.map(esc).join(' · ')}</p></div>`;
     }
   } else {
     // Plain text content — parse into structured HTML
@@ -1759,7 +1883,7 @@ function buildResumeHtml(resume: Resume): string {
         if (inList) { bodyHtml += '</ul>'; inList = false; }
         inHeader = false;
         justSawDivider = true;
-        bodyHtml += '<hr>';
+        bodyHtml += `<hr style="border: none; border-top: 1.5px solid #d8d8d8; margin: 10px 0;">`;
         return;
       }
       if (line.trim() === '') {
@@ -1768,9 +1892,11 @@ function buildResumeHtml(resume: Resume): string {
         return;
       }
       if (inHeader) {
-        bodyHtml += headerLineCount === 0
-          ? `<h1>${esc(line)}</h1>`
-          : `<p class="contact">${esc(line)}</p>`;
+        if (headerLineCount === 0) {
+          bodyHtml += `<h1 style="color: ${colors.primary};">${esc(line)}</h1>`;
+        } else {
+          bodyHtml += `<p class="contact">${esc(line)}</p>`;
+        }
         headerLineCount++;
         return;
       }
@@ -1784,9 +1910,8 @@ function buildResumeHtml(resume: Resume): string {
       const trimmed = line.trim();
       const isAllCaps = trimmed.length > 2 && trimmed === trimmed.toUpperCase() && /[A-Z]{2}/.test(trimmed);
       if (isAllCaps) {
-        // Section header if immediately after ---; otherwise job title / degree title
         bodyHtml += justSawDivider
-          ? `<h2>${esc(trimmed)}</h2>`
+          ? `<h2 style="color: ${colors.primary};">${esc(trimmed)}</h2>`
           : `<p class="job-title">${esc(trimmed)}</p>`;
         justSawDivider = false;
         return;
@@ -1807,38 +1932,37 @@ function buildResumeHtml(resume: Resume): string {
       font-size: 10pt;
       line-height: 1.55;
       color: #1a1a1a;
-      padding: 36px 52px;
-      max-width: 760px;
+      padding: 40px 52px;
+      max-width: 780px;
       margin: 0 auto;
     }
-    h1 { font-size: 21pt; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 3px; }
-    .subtitle { font-size: 10.5pt; color: #555; font-weight: 400; margin-bottom: 5px; }
-    .contact, .meta { font-size: 8.5pt; color: #666; margin-bottom: 2px; }
-    .header { margin-bottom: 8px; }
-    .header-rule, hr {
-      border: none;
-      border-top: 1.5px solid #d8d8d8;
-      margin: 8px 0 10px 0;
-    }
+    h1 { font-size: 24pt; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .subtitle { font-size: 13pt; font-weight: 400; margin-bottom: 8px; }
+    .contact { font-size: 9pt; color: #666; margin-bottom: 2px; }
+    .meta { font-size: 9pt; color: #666; margin-bottom: 2px; }
+    .header { margin-bottom: 0; }
     h2 {
-      font-size: 7.5pt;
+      font-size: 13pt;
       font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: #888;
-      border-bottom: 1px solid #e8e8e8;
-      padding-bottom: 3px;
-      margin: 16px 0 7px 0;
+      margin: 18px 0 10px 0;
     }
-    .section { margin-bottom: 4px; }
-    .job, .edu { margin-bottom: 9px; }
+    .section { margin-bottom: 6px; }
+    .job, .edu { margin-bottom: 12px; }
     .job-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1px; }
-    .job-title { font-size: 10pt; font-weight: 600; color: #111; display: block; margin: 7px 0 1px 0; }
-    .dates { font-size: 8.5pt; color: #888; white-space: nowrap; }
-    .company { font-size: 8.5pt; color: #666; margin-bottom: 4px; }
-    ul { padding-left: 15px; margin: 4px 0 5px 0; }
-    li { font-size: 9.5pt; margin-bottom: 2px; line-height: 1.5; color: #222; }
-    .body-text { font-size: 9.5pt; color: #333; line-height: 1.55; margin-bottom: 3px; }
+    .job-title { font-size: 10.5pt; font-weight: 600; color: #111; }
+    .dates { font-size: 9pt; color: #666; white-space: nowrap; text-align: right; }
+    .company { font-size: 9.5pt; margin-bottom: 4px; }
+    ul { padding-left: 17px; margin: 4px 0 6px 0; }
+    li { font-size: 9.5pt; margin-bottom: 3px; line-height: 1.5; color: #333; }
+    .body-text { font-size: 9.5pt; color: #333; line-height: 1.6; margin-bottom: 4px; }
+    .skills-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+    .skill-tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 9pt;
+      font-weight: 500;
+    }
     @page { margin: 0.5in; }
     @media print { body { padding: 0; } }
   `;
@@ -2135,6 +2259,11 @@ function TailorView({ resume, resumes, saveResumes, showNotification, intakeCont
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [saved, setSaved] = useState<boolean>(false);
   const [tailorError, setTailorError] = useState<string | null>(null);
+  const { isPro, loading: subLoading } = useSubscription();
+
+  if (!subLoading && !isPro) {
+    return <UpgradePrompt feature="AI Resume Tailoring" requiredPlan="pro" />;
+  }
 
   // Convert structured resume data to readable plain text for the AI prompt
   function serializeResume(r: Resume): string {
@@ -2230,6 +2359,7 @@ function TailorView({ resume, resumes, saveResumes, showNotification, intakeCont
         setSavedResumeId(result.savedResume.id);
         setSaved(true);
       }
+      analytics.resumeTailored();
       showNotification('success', 'Resume tailored successfully!');
     } catch (error) {
       console.error('Tailor error:', error);
