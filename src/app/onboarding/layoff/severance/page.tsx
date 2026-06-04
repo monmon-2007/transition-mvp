@@ -259,14 +259,40 @@ export default function SeverancePage() {
     );
   }
 
-  // If user didn't receive a severance offer, show guidance instead of redirecting
+  // Non-Pro+ users: show upgrade prompt
+  if (!subLoading && !isProPlus) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
+          <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+            <Link href="/onboarding/layoff/dashboard" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Back to dashboard
+            </Link>
+            <span className="text-blue-600 font-semibold text-sm">Transition</span>
+          </div>
+        </header>
+        <main className="max-w-3xl mx-auto px-6 py-10">
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-3">Severance Review</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3 leading-snug">
+            Review and negotiate your severance
+          </h1>
+          <p className="text-gray-500 text-sm leading-relaxed mb-6">
+            Get a fairness score for your severance package, an AI-powered assessment of your leverage, and a professionally drafted negotiation email.
+          </p>
+          <UpgradePrompt feature="Severance Review & Negotiation" requiredPlan="pro_plus" />
+        </main>
+      </div>
+    );
+  }
+
+  // Pro+ users without severance data: show guidance
   if (intake.severanceOffered !== "yes") {
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
           <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-            <Link href="/onboarding/layoff/summary" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors">
-              <ArrowLeft className="w-4 h-4" /> Back to summary
+            <Link href="/onboarding/layoff/dashboard" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Back to dashboard
             </Link>
             <span className="text-blue-600 font-semibold text-sm">Transition</span>
           </div>
@@ -396,10 +422,7 @@ export default function SeverancePage() {
         </div>
 
         {/* ── Questions ── */}
-        {!subLoading && !isProPlus && (step === "questions" || step === "generating" || step === "result") && (
-          <UpgradePrompt feature="AI Severance Negotiation" requiredPlan="pro_plus" />
-        )}
-        {(isProPlus || subLoading) && (step === "questions" || step === "generating") && (
+        {(step === "questions" || step === "generating") && (
           <div>
             <h2 className="text-sm font-semibold text-gray-900 mb-5 flex items-center gap-2">
               A few quick questions
@@ -551,7 +574,7 @@ export default function SeverancePage() {
         )}
 
         {/* ── Result ── */}
-        {isProPlus && step === "result" && assessment && (
+        {step === "result" && assessment && (
           <div>
             {/* Assessment */}
             <div className="bg-white border border-blue-200 rounded-xl p-6 mb-6">
