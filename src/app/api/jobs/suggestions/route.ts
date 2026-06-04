@@ -23,6 +23,7 @@ export type JobSuggestion = {
   matchedKeywords: string[];
   missingKeywords: string[];
   description: string;
+  sponsorship: "sponsors" | "no-sponsorship" | "unknown";
 };
 
 export type JobSuggestionsResponse = {
@@ -106,6 +107,42 @@ function simpleHash(str: string): string {
     hash |= 0;
   }
   return Math.abs(hash).toString(36);
+}
+
+/* ─────────────────────────────────────────
+   Detect visa sponsorship from job description
+───────────────────────────────────────── */
+const SPONSORS_PATTERNS = [
+  /\bh-?1b\s*sponsor/i,
+  /\bvisa\s*sponsor/i,
+  /\bsponsor\s*(a\s+)?visa/i,
+  /\bwill\s+sponsor/i,
+  /\bsponsorship\s*(is\s+)?available/i,
+  /\bopen\s+to\s+sponsoring/i,
+];
+
+const NO_SPONSORSHIP_PATTERNS = [
+  /\bmust\s+be\s+(legally\s+)?authorized/i,
+  /\bno\s+(visa\s+)?sponsorship/i,
+  /\bnot\s+sponsor/i,
+  /\bwill\s+not\s+sponsor/i,
+  /\bu\.?s\.?\s*citizen(ship)?\s*(or|\/)\s*(permanent\s+)?resident/i,
+  /\bpermanent\s+resident\s+required/i,
+  /\bsecurity\s+clearance\s+required/i,
+  /\bauthorized\s+to\s+work\s+in\s+the\s+(united\s+states|u\.?s\.?)/i,
+  /\bwithout\s+(requiring\s+)?sponsorship/i,
+];
+
+function detectSponsorship(description: string): "sponsors" | "no-sponsorship" | "unknown" {
+  if (!description) return "unknown";
+  const text = description.toLowerCase();
+  for (const pattern of NO_SPONSORSHIP_PATTERNS) {
+    if (pattern.test(text)) return "no-sponsorship";
+  }
+  for (const pattern of SPONSORS_PATTERNS) {
+    if (pattern.test(text)) return "sponsors";
+  }
+  return "unknown";
 }
 
 /* ─────────────────────────────────────────
@@ -270,6 +307,7 @@ export async function GET(req: NextRequest) {
         matchedKeywords: match.matched.slice(0, 10),
         missingKeywords: match.missing.slice(0, 10),
         description: (job.description || "").slice(0, 500),
+        sponsorship: detectSponsorship(job.description || ""),
       };
     });
 

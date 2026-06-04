@@ -27,6 +27,7 @@ export default function JobSuggestionsCard({ onSave }: JobSuggestionsCardProps) 
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [jobDetails, setJobDetails] = useState<Record<string, JobDetail>>({});
   const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
+  const [visaFilter, setVisaFilter] = useState(false);
 
   const loadSuggestions = useCallback(async () => {
     try {
@@ -89,8 +90,13 @@ export default function JobSuggestionsCard({ onSave }: JobSuggestionsCardProps) 
     return `Updated ${days}d ago`;
   }
 
-  const displayJobs = expanded ? suggestions : suggestions.slice(0, 5);
+  const filteredSuggestions = visaFilter
+    ? suggestions.filter((j) => j.sponsorship !== "no-sponsorship")
+    : suggestions;
+  const displayJobs = expanded ? filteredSuggestions : filteredSuggestions.slice(0, 5);
   const isFreeUser = !isPro && !isProPlus && !subLoading;
+  const sponsorCount = suggestions.filter((j) => j.sponsorship === "sponsors").length;
+  const noSponsorCount = suggestions.filter((j) => j.sponsorship === "no-sponsorship").length;
 
   // Loading skeleton
   if (loading || subLoading) {
@@ -228,6 +234,31 @@ export default function JobSuggestionsCard({ onSave }: JobSuggestionsCardProps) 
         </span>
       </div>
 
+      {/* Visa filter */}
+      {(sponsorCount > 0 || noSponsorCount > 0) && (
+        <div className="px-6 pb-3 flex items-center gap-2">
+          <button
+            onClick={() => setVisaFilter(!visaFilter)}
+            className={`text-xs font-medium px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 ${
+              visaFilter
+                ? "bg-cyan-600 text-white shadow-sm"
+                : "bg-gray-50 text-gray-600 ring-1 ring-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M2 10h20" /><path d="M12 4v16" />
+            </svg>
+            Visa Sponsorship
+            {visaFilter && ` (${filteredSuggestions.length})`}
+          </button>
+          {visaFilter && noSponsorCount > 0 && (
+            <span className="text-[10px] text-gray-400">
+              {noSponsorCount} job{noSponsorCount !== 1 ? "s" : ""} hidden (no sponsorship)
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Job list */}
       <div className="px-6 pb-5 space-y-2.5">
         {displayJobs.map((job) => {
@@ -286,6 +317,16 @@ export default function JobSuggestionsCard({ onSave }: JobSuggestionsCardProps) 
                       <span className="text-xs text-gray-400 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {job.agoTime}
+                      </span>
+                    )}
+                    {job.sponsorship === "sponsors" && (
+                      <span className="text-[10px] font-semibold text-cyan-700 bg-cyan-50 ring-1 ring-cyan-200 px-2 py-0.5 rounded-full">
+                        Sponsors Visa
+                      </span>
+                    )}
+                    {job.sponsorship === "no-sponsorship" && (
+                      <span className="text-[10px] font-semibold text-red-600 bg-red-50 ring-1 ring-red-200 px-2 py-0.5 rounded-full">
+                        No Sponsorship
                       </span>
                     )}
                   </div>
@@ -435,7 +476,7 @@ export default function JobSuggestionsCard({ onSave }: JobSuggestionsCardProps) 
       </div>
 
       {/* Footer — show all / collapse */}
-      {suggestions.length > 5 && (
+      {filteredSuggestions.length > 5 && (
         <div className="px-6 py-3 border-t border-gray-100 bg-gray-50/50">
           <button
             onClick={() => setExpanded(!expanded)}
@@ -444,7 +485,7 @@ export default function JobSuggestionsCard({ onSave }: JobSuggestionsCardProps) 
             {expanded ? (
               <><ChevronUp className="w-3.5 h-3.5" /> Show less</>
             ) : (
-              <><ChevronDown className="w-3.5 h-3.5" /> View all {suggestions.length} suggestions</>
+              <><ChevronDown className="w-3.5 h-3.5" /> View all {filteredSuggestions.length} suggestions</>
             )}
           </button>
         </div>

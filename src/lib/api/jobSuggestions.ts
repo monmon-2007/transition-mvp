@@ -12,6 +12,7 @@ export interface JobSuggestion {
   matchedKeywords: string[];
   missingKeywords: string[];
   description: string;
+  sponsorship: "sponsors" | "no-sponsorship" | "unknown";
 }
 
 export interface JobSuggestionsResponse {
@@ -68,6 +69,45 @@ export async function fetchJobSuggestions(prefs?: JobSearchPreferences): Promise
     throw new Error("Failed to fetch job suggestions");
   }
   return res.json();
+}
+
+/* ─────────────────────────────────────────
+   Saved searches — localStorage
+───────────────────────────────────────── */
+export interface SavedSearch {
+  id: string;
+  name: string;
+  prefs: JobSearchPreferences;
+  alertFrequency: "daily" | "off";
+  createdAt: string;
+}
+
+const SAVED_SEARCHES_KEY = "novapivots:saved-searches";
+
+export function getSavedSearches(): SavedSearch[] {
+  try {
+    const stored = localStorage.getItem(SAVED_SEARCHES_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return [];
+}
+
+export function addSavedSearch(search: SavedSearch) {
+  const searches = getSavedSearches();
+  searches.push(search);
+  localStorage.setItem(SAVED_SEARCHES_KEY, JSON.stringify(searches));
+}
+
+export function removeSavedSearch(id: string) {
+  const searches = getSavedSearches().filter((s) => s.id !== id);
+  localStorage.setItem(SAVED_SEARCHES_KEY, JSON.stringify(searches));
+}
+
+export function updateSavedSearch(id: string, updates: Partial<SavedSearch>) {
+  const searches = getSavedSearches().map((s) =>
+    s.id === id ? { ...s, ...updates } : s
+  );
+  localStorage.setItem(SAVED_SEARCHES_KEY, JSON.stringify(searches));
 }
 
 export async function fetchJobDetail(jobUrl: string): Promise<JobDetail> {

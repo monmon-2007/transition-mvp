@@ -110,6 +110,8 @@ export default function ProfilePage() {
   }
 
   const userInitial = (session.user as any)?.name?.[0] || (session.user?.email?.[0] || 'U').toUpperCase();
+  const userImage = (session.user as any)?.image || null;
+  const isOAuthUser = (session.user as any)?.provider === 'google';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-indigo-50">
@@ -124,9 +126,13 @@ export default function ProfilePage() {
         {/* Profile Header */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
           <div className="flex items-center gap-6 mb-6">
-            <div className="w-20 h-20 bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-3xl font-semibold shadow-md">
-              {userInitial}
-            </div>
+            {userImage ? (
+              <img src={userImage} alt="" className="w-20 h-20 rounded-full object-cover shadow-md" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="w-20 h-20 bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-3xl font-semibold shadow-md">
+                {userInitial}
+              </div>
+            )}
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
                 {(session.user as any)?.name || 'User'}
@@ -297,59 +303,61 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Change Password */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <form onSubmit={handleChangePassword} className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">Change Password</h2>
-            {passwordError && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">{passwordError}</p>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-                className="w-full border border-gray-300 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength={8}
-                className="w-full border border-gray-300 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition"
-                placeholder="At least 8 characters"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="w-full border border-gray-300 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={passwordSaving}
-              className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {passwordSaving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : passwordSaved ? (
-                <Check className="w-4 h-4" />
-              ) : null}
-              {passwordSaved ? 'Password changed' : 'Change password'}
-            </button>
-          </form>
-        </div>
+        {/* Change Password — only for email/password users */}
+        {!isOAuthUser && (
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <h2 className="text-lg font-semibold text-gray-900">Change Password</h2>
+              {passwordError && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">{passwordError}</p>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                  className="w-full border border-gray-300 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  className="w-full border border-gray-300 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition"
+                  placeholder="At least 8 characters"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="w-full border border-gray-300 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={passwordSaving}
+                className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {passwordSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : passwordSaved ? (
+                  <Check className="w-4 h-4" />
+                ) : null}
+                {passwordSaved ? 'Password changed' : 'Change password'}
+              </button>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );

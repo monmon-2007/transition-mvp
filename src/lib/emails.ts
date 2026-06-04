@@ -112,6 +112,24 @@ export async function sendRunwayReminderEmail(email: string, name: string): Prom
   return sendEmail(email, `${firstName}, do you know how many months you have?`, html);
 }
 
+/** Sent by job alert cron — new matched jobs for a saved search */
+export async function sendJobAlertEmail(
+  email: string,
+  name: string,
+  searchName: string,
+  jobs: import("@/lib/email/jobAlert").JobAlertJob[],
+): Promise<boolean> {
+  const { buildJobAlertEmail } = await import("@/lib/email/jobAlert");
+  const appUrl = getAppUrl();
+  const { subject, html } = buildJobAlertEmail({
+    userName: name,
+    searchName,
+    jobs,
+    dashboardUrl: `${appUrl}/onboarding/layoff/dashboard`,
+  });
+  return sendEmail(email, subject, wrapEmail(html));
+}
+
 /** Sent ~4 days after signup — nudge to try AI job match */
 export async function sendJobMatchEmail(email: string, name: string): Promise<boolean> {
   const appUrl = getAppUrl();

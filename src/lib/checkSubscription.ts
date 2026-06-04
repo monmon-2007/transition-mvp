@@ -10,6 +10,14 @@ type SubscriptionInfo = {
   status: string;
 };
 
+/** Emails that get free Pro+ access (comma-separated in env var) */
+function getWhitelistedEmails(): Set<string> {
+  const raw = process.env.PRO_PLUS_WHITELIST || "";
+  return new Set(
+    raw.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
+  );
+}
+
 /**
  * Gets the current user's subscription info from the backend.
  * Returns null if the user is not authenticated.
@@ -17,7 +25,13 @@ type SubscriptionInfo = {
 export async function getSubscription(): Promise<SubscriptionInfo | null> {
   const session = await getServerSession(authOptions as any) as any;
   const userId = session?.user?.id;
+  const userEmail = session?.user?.email;
   if (!userId) return null;
+
+  // Whitelist override — grant free Pro+ to specific emails
+  if (userEmail && getWhitelistedEmails().has(userEmail.toLowerCase())) {
+    return { userId, plan: "pro_plus", status: "active" };
+  }
 
   try {
     const res = await backendFetch(`/api/users/${userId}/subscription`);

@@ -10,7 +10,7 @@ import {
   ChevronDown, ChevronUp, StickyNote, Calendar, Trash2, Wrench, X, Search,
   Settings2, RefreshCw, Clock, Download,
 } from "lucide-react";
-import { fetchJobSuggestions, type JobSuggestion, type JobSearchPreferences, getJobSearchPreferences, saveJobSearchPreferences } from "@/lib/api/jobSuggestions";
+import { fetchJobSuggestions, type JobSuggestion, type JobSearchPreferences, getJobSearchPreferences, saveJobSearchPreferences, type SavedSearch, getSavedSearches, addSavedSearch, removeSavedSearch } from "@/lib/api/jobSuggestions";
 import JobSearchInsightCard from "./JobSearchInsightCard";
 import ApplicationKanban from "./ApplicationKanban";
 import { computeJDMatch, type JDMatchResult } from "@/lib/jdMatch";
@@ -145,6 +145,7 @@ function PipelineView({
   const [jdMatchResult, setJdMatchResult] = useState<JDMatchResult | null>(null);
   const [coverLetterText, setCoverLetterText] = useState("");
   const [generatingCoverLetter, setGeneratingCoverLetter] = useState(false);
+  const [atsScore, setAtsScore] = useState<{ before: number; after: number; matchedKeywords: string[]; missingKeywords: string[] } | null>(null);
   const [interviewPrepApp, setInterviewPrepApp] = useState<JobApplication | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | JobApplication["status"]>("all");
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
@@ -204,6 +205,7 @@ function PipelineView({
         };
         onResumeCreated(newResume);
         setForm((f) => ({ ...f, resumeId: result.savedResume.id, resumeVersionName: result.savedResume.name, tailored: true }));
+        if (result.atsScore) setAtsScore(result.atsScore);
         setShowTailorPanel(false);
         setTailorJd("");
       }
@@ -254,6 +256,7 @@ function PipelineView({
     setTailorError("");
     setCoverLetterText("");
     setJdMatchResult(null);
+    setAtsScore(null);
     setShowForm(false);
   }
 
@@ -760,9 +763,55 @@ function PipelineView({
                   ))}
                 </select>
                 {form.tailored && (
-                  <p className="text-xs text-violet-600 mt-1 flex items-center gap-1">
-                    <Wand2 className="w-3 h-3" /> Tailored resume selected
-                  </p>
+                  <div className="mt-1 space-y-2">
+                    <p className="text-xs text-violet-600 flex items-center gap-1">
+                      <Wand2 className="w-3 h-3" /> Tailored resume selected
+                    </p>
+                    {atsScore && (
+                      <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200 rounded-lg p-3">
+                        <div className="flex items-center gap-3 mb-2">
+                          <p className="text-xs font-semibold text-gray-700">ATS Compatibility</p>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-sm font-bold ${atsScore.before < 50 ? "text-red-500" : atsScore.before < 70 ? "text-amber-500" : "text-emerald-500"}`}>
+                              {atsScore.before}%
+                            </span>
+                            <span className="text-gray-400 text-xs">→</span>
+                            <span className={`text-sm font-bold ${atsScore.after < 50 ? "text-red-500" : atsScore.after < 70 ? "text-amber-500" : "text-emerald-500"}`}>
+                              {atsScore.after}%
+                            </span>
+                            {atsScore.after > atsScore.before && (
+                              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">
+                                +{atsScore.after - atsScore.before}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {atsScore.matchedKeywords.length > 0 && (
+                          <div className="mb-1.5">
+                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Matched</p>
+                            <div className="flex flex-wrap gap-1">
+                              {atsScore.matchedKeywords.slice(0, 8).map((kw) => (
+                                <span key={kw} className="text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">{kw}</span>
+                              ))}
+                              {atsScore.matchedKeywords.length > 8 && (
+                                <span className="text-[10px] text-gray-400">+{atsScore.matchedKeywords.length - 8} more</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {atsScore.missingKeywords.length > 0 && (
+                          <div>
+                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Still missing</p>
+                            <div className="flex flex-wrap gap-1">
+                              {atsScore.missingKeywords.slice(0, 6).map((kw) => (
+                                <span key={kw} className="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">{kw}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -883,6 +932,9 @@ function DiscoverView({ onAdd }: {
   const [showPrefs, setShowPrefs] = useState(false);
   const [prefs, setPrefs] = useState<JobSearchPreferences>(() => getJobSearchPreferences());
   const [prefsSaved, setPrefsSaved] = useState(false);
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(() => getSavedSearches());
+  const [showSaveSearch, setShowSaveSearch] = useState(false);
+  const [saveSearchName, setSaveSearchName] = useState("");
 
   const load = useCallback(async (p?: JobSearchPreferences) => {
     try {
@@ -912,6 +964,40 @@ function DiscoverView({ onAdd }: {
     if (savedIds.has(job.id)) return;
     onAdd({ company: job.company, role: job.position, jobLink: job.jobUrl || undefined });
     setSavedIds((prev) => new Set(prev).add(job.id));
+  }
+
+  function handleSaveSearch() {
+    if (!saveSearchName.trim()) return;
+    const search: SavedSearch = {
+      id: Date.now().toString(36),
+      name: saveSearchName.trim(),
+      prefs: { ...prefs },
+      alertFrequency: "daily",
+      createdAt: new Date().toISOString(),
+    };
+    addSavedSearch(search);
+    setSavedSearches(getSavedSearches());
+    setSaveSearchName("");
+    setShowSaveSearch(false);
+    // Sync to backend for cron access
+    fetch("/api/jobs/saved-searches", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(search),
+    }).catch(() => {});
+  }
+
+  function handleDeleteSearch(id: string) {
+    removeSavedSearch(id);
+    setSavedSearches(getSavedSearches());
+    // Sync deletion to backend
+    fetch(`/api/jobs/saved-searches?id=${id}`, { method: "DELETE" }).catch(() => {});
+  }
+
+  function handleLoadSearch(search: SavedSearch) {
+    setPrefs(search.prefs);
+    saveJobSearchPreferences(search.prefs);
+    load(search.prefs);
   }
 
   async function handleExpand(job: JobSuggestion) {
@@ -1119,7 +1205,61 @@ function DiscoverView({ onAdd }: {
             {prefsSaved && (
               <span className="text-xs text-emerald-600 font-medium">Preferences saved!</span>
             )}
+            <div className="ml-auto">
+              {!showSaveSearch ? (
+                <button
+                  onClick={() => setShowSaveSearch(true)}
+                  className="flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-700 font-medium transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Save search
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    value={saveSearchName}
+                    onChange={(e) => setSaveSearchName(e.target.value)}
+                    placeholder="Search name..."
+                    className="text-sm px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 w-40"
+                    onKeyDown={(e) => e.key === "Enter" && handleSaveSearch()}
+                    autoFocus
+                  />
+                  <button onClick={handleSaveSearch} className="text-xs bg-violet-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-violet-700">Save</button>
+                  <button onClick={() => { setShowSaveSearch(false); setSaveSearchName(""); }} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Saved searches list */}
+          {savedSearches.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Saved Searches</p>
+              <div className="space-y-1.5">
+                {savedSearches.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                    <button
+                      onClick={() => handleLoadSearch(s)}
+                      className="flex-1 text-left text-sm font-medium text-gray-700 hover:text-violet-700 transition-colors"
+                    >
+                      {s.name}
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-gray-400">
+                        {[s.prefs.location, s.prefs.jobType, s.prefs.remote].filter(Boolean).join(" · ") || "Default filters"}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteSearch(s.id)}
+                        className="text-gray-300 hover:text-red-500 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

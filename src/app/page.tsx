@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import posthog from 'posthog-js';
+import AnimatedProductDemo from '@/components/AnimatedProductDemo';
 
 export default function Home() {
   const { status } = useSession();
@@ -136,6 +137,11 @@ export default function Home() {
               Free plan available
             </span>
           </p>
+
+          {/* Animated product demo */}
+          <div className="mt-14 sm:mt-20">
+            <AnimatedProductDemo />
+          </div>
         </div>
       </section>
 
@@ -273,34 +279,6 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── SCREENSHOTS ─── */}
-      <section className="px-4 sm:px-6 py-16 sm:py-20 bg-gray-50">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <p className="text-sm font-semibold text-violet-600 uppercase tracking-wider mb-3">See it in action</p>
-            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-4">
-              Your dashboard, your pace
-            </h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-5">
-            {[
-              { src: '/screenshots/dashboard.png', label: 'AI Resume Builder & Job Tailoring' },
-              { src: '/screenshots/runway.png', label: 'Financial Runway Calculator' },
-              { src: '/screenshots/task.png', label: 'Smart Task Tracker' },
-            ].map(({ src, label }) => (
-              <div key={src} className="group rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm hover:shadow-lg hover:shadow-violet-100 transition-all duration-200">
-                <div className="h-52 sm:h-60 overflow-hidden">
-                  <img src={src} alt={label} className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500" />
-                </div>
-                <div className="px-4 py-3 border-t border-gray-100">
-                  <p className="text-xs font-semibold text-gray-600">{label}</p>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>

@@ -173,7 +173,7 @@ export default function SeverancePage() {
       return;
     }
     fetchLayoffIntake().then((data) => {
-      if (!data || data.status !== "completed") {
+      if (!data || !["completed", "quick-start"].includes(data.status)) {
         router.replace("/onboarding");
         return;
       }

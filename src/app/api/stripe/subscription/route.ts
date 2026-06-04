@@ -6,8 +6,16 @@ import { backendFetch } from "@/lib/backendClient";
 export async function GET() {
   const session = await getServerSession(authOptions as any) as any;
   const userId = session?.user?.id;
+  const userEmail = session?.user?.email;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Whitelist override — grant free Pro+ to specific emails
+  const whitelist = (process.env.PRO_PLUS_WHITELIST || "")
+    .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+  if (userEmail && whitelist.includes(userEmail.toLowerCase())) {
+    return NextResponse.json({ plan: "pro_plus", status: "active" });
   }
 
   try {

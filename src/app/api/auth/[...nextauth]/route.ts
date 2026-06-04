@@ -1,6 +1,7 @@
 import NextAuth, { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+import { sendWelcomeEmail } from "@/lib/emails";
 
 const backend = (
   process.env.BACKEND_URL ||
@@ -90,6 +91,13 @@ const authOptions: AuthOptions = {
             // Store the backend user ID on the user object so jwt callback can pick it up
             (user as any).backendId = String(data.id);
             (user as any).accessToken = data.accessToken || data.token;
+
+            // Send welcome email for newly created OAuth users
+            if (data.created) {
+              sendWelcomeEmail(user.email!, user.name || "").catch((err: unknown) =>
+                console.error("OAuth welcome email failed:", err)
+              );
+            }
           } else {
             // If social-login endpoint doesn't exist yet, fall back to using
             // the provider account ID. Log the error for debugging.

@@ -53,10 +53,11 @@ export default function Header() {
   }, [router]);
 
   const userInitial = (session?.user as any)?.name?.[0] || (session?.user?.email?.[0] || "U").toUpperCase();
+  const userImage = (session?.user as any)?.image || null;
 
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
-      <div className="mx-auto px-4 sm:px-6 py-3 flex items-center justify-between w-full max-w-7xl">
+      <div className="px-6 sm:px-10 lg:px-16 py-3 flex items-center justify-between w-full">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
           <Logo size={32} />
@@ -94,9 +95,13 @@ export default function Header() {
                   aria-expanded={isDropdownOpen}
                   aria-haspopup="true"
                 >
-                  <div className="w-9 h-9 bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold shadow-sm text-sm">
-                    {userInitial}
-                  </div>
+                  {userImage ? (
+                    <img src={userImage} alt="" className="w-9 h-9 rounded-full object-cover shadow-sm" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="w-9 h-9 bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold shadow-sm text-sm">
+                      {userInitial}
+                    </div>
+                  )}
                 </button>
 
                 {isDropdownOpen && (
@@ -130,9 +135,13 @@ export default function Header() {
         {/* Mobile right side */}
         <div className="flex sm:hidden items-center gap-2">
           {session?.user && (
-            <div className="w-8 h-8 bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-              {userInitial}
-            </div>
+            userImage ? (
+              <img src={userImage} alt="" className="w-8 h-8 rounded-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="w-8 h-8 bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                {userInitial}
+              </div>
+            )
           )}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

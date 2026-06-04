@@ -5,6 +5,7 @@ import { computeRunway } from "@/lib/runway";
 import { backendFetch } from "@/lib/backendClient";
 import { checkFeatureAccess } from "@/lib/checkSubscription";
 import { z } from "zod";
+import { computeJDMatch } from "@/lib/jdMatch";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -48,10 +49,18 @@ export type TailorRequest = {
   jobDescription: string;
 };
 
+export type ATSScore = {
+  before: number;
+  after: number;
+  matchedKeywords: string[];
+  missingKeywords: string[];
+};
+
 export type TailorResult = {
   tailoredContent: string;
   whatChanged: string[];
   suggestions: string[];
+  atsScore: ATSScore;
   savedResume: {
     id: number;
     name: string;
@@ -305,10 +314,22 @@ export async function POST(req: NextRequest) {
     // Non-fatal — client can still use the content
   }
 
+  // Compute ATS compatibility scores (before vs after tailoring)
+  const beforeMatch = computeJDMatch(resumeContent, jobDescription);
+  const afterMatch = computeJDMatch(tailorResult.tailoredContent, jobDescription);
+
+  const atsScore: ATSScore = {
+    before: beforeMatch.score,
+    after: afterMatch.score,
+    matchedKeywords: afterMatch.matched.slice(0, 15),
+    missingKeywords: afterMatch.missing.slice(0, 10),
+  };
+
   return NextResponse.json({
     tailoredContent: tailorResult.tailoredContent,
     whatChanged: tailorResult.whatChanged || [],
     suggestions: tailorResult.suggestions || [],
+    atsScore,
     savedResume,
   } satisfies TailorResult);
 }
