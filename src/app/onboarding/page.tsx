@@ -77,6 +77,13 @@ export default function Onboarding() {
     }
 
     async function redirectIfReturning() {
+      // Allow users to re-enter intake form via ?edit=true
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("edit") === "true") {
+        setChecking(false);
+        return;
+      }
+
       try {
         const intake = await fetchLayoffIntake();
         if (intake && (intake.status === "completed" || intake.status === "quick-start")) {

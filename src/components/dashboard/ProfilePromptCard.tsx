@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { patchIntakeFields } from "@/lib/api/layoffIntake";
 import { useDashboard } from "@/app/onboarding/layoff/shared/DashboardContext";
-import { UserCircle, Calendar, DollarSign, Heart, ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
+import { UserCircle, Calendar, DollarSign, Heart, ArrowRight, Loader2, CheckCircle2, X } from "lucide-react";
 import Link from "next/link";
 
 type PromptType = "termination-date" | "severance" | "health" | "full-profile";
@@ -20,14 +20,21 @@ function getNextPrompt(intake: any): PromptType | null {
   return null;
 }
 
+const DISMISS_KEY = "novapivots:profile-prompt-dismissed";
+
 export default function ProfilePromptCard() {
   const { intake, refreshIntake, profileCompleteness } = useDashboard();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [value, setValue] = useState("");
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(DISMISS_KEY) === "true";
+  });
 
   const prompt = getNextPrompt(intake);
   if (!prompt) return null;
+  if (prompt === "full-profile" && dismissed) return null;
 
   async function handleSave(fields: Record<string, string | null>) {
     setSaving(true);
@@ -46,7 +53,17 @@ export default function ProfilePromptCard() {
 
   if (prompt === "full-profile") {
     return (
-      <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200 rounded-2xl p-5">
+      <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200 rounded-2xl p-5 relative">
+        <button
+          onClick={() => {
+            setDismissed(true);
+            localStorage.setItem(DISMISS_KEY, "true");
+          }}
+          className="absolute top-3 right-3 p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-white/60 transition-colors"
+          aria-label="Dismiss"
+        >
+          <X className="w-4 h-4" />
+        </button>
         <div className="flex items-center gap-3 mb-2">
           <UserCircle className="w-5 h-5 text-violet-600" />
           <h3 className="font-semibold text-gray-900">Complete your profile</h3>
@@ -58,7 +75,7 @@ export default function ProfilePromptCard() {
           Fill in the rest of your details for a fully personalized action plan with deadlines and dollar amounts.
         </p>
         <Link
-          href="/onboarding/layoff"
+          href="/onboarding?edit=true"
           className="inline-flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-700 font-medium"
         >
           Complete intake form <ArrowRight className="w-3.5 h-3.5" />

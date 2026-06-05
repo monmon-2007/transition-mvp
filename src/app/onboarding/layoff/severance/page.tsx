@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { fetchLayoffIntake, LayoffIntakeApiResponse } from "@/lib/api/layoffIntake";
+import { fetchLayoffIntake, patchIntakeFields, LayoffIntakeApiResponse } from "@/lib/api/layoffIntake";
 import type { NegotiationAnswers, NegotiationContext } from "@/app/api/generate-negotiation-email/route";
 import {
   ArrowLeft, ArrowRight, Clock, CheckCircle2,
@@ -138,6 +138,11 @@ export default function SeverancePage() {
   const [showExport, setShowExport] = useState(false);
   const { isProPlus, loading: subLoading } = useSubscription();
 
+  // Inline editable fields for missing company/role
+  const [inlineCompany, setInlineCompany] = useState("");
+  const [inlineRole, setInlineRole] = useState("");
+  const [inlineSaving, setInlineSaving] = useState(false);
+
   // A2: Auto-populate goals based on intake analysis data
   useEffect(() => {
     if (!intake) return;
@@ -191,6 +196,24 @@ export default function SeverancePage() {
     }));
   }
 
+  // Effective company/role (inline override or from intake)
+  const effectiveCompany = inlineCompany || intake?.employer || "";
+  const effectiveRole = inlineRole || intake?.jobTitle || "";
+
+  async function handleSaveInlineFields() {
+    const fields: Record<string, string> = {};
+    if (inlineCompany && !intake?.employer) fields.employer = inlineCompany;
+    if (inlineRole && !intake?.jobTitle) fields.jobTitle = inlineRole;
+    if (Object.keys(fields).length === 0) return;
+    setInlineSaving(true);
+    try {
+      await patchIntakeFields(fields);
+      // Update local intake state
+      setIntake((prev) => prev ? { ...prev, ...fields } : prev);
+    } catch { /* fail silently */ }
+    setInlineSaving(false);
+  }
+
   const answersComplete =
     answers.tenure !== "" &&
     answers.layoffType !== "" &&
@@ -203,9 +226,12 @@ export default function SeverancePage() {
     setGenerateError(null);
     setStep("generating");
 
+    // Save any inline fields before generating
+    await handleSaveInlineFields();
+
     const context: NegotiationContext = {
-      company: intake.employer,
-      role: intake.jobTitle,
+      company: effectiveCompany || null,
+      role: effectiveRole || null,
       severanceAmount: intake.severanceAmount,
       severancePaymentType: intake.severancePaymentType,
       severanceSignDeadline: intake.severanceSignDeadline,
@@ -310,7 +336,7 @@ export default function SeverancePage() {
               <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" /> If you were laid off without severance, you may still want to ask — especially if you signed a non-compete or have IP concerns.</li>
               <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" /> File for unemployment benefits as soon as possible — there is usually a waiting period before payments begin.</li>
             </ul>
-            <Link href="/onboarding" className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 mt-4">
+            <Link href="/onboarding?edit=true" className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 mt-4">
               Update my intake <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -342,10 +368,10 @@ export default function SeverancePage() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link
-            href="/onboarding/layoff/summary"
+            href="/onboarding/layoff/dashboard"
             className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" /> Back to summary
+            <ArrowLeft className="w-4 h-4" /> Back to dashboard
           </Link>
           <div className="flex items-center gap-3">
             {intake?.severanceAmount && (
@@ -387,11 +413,33 @@ export default function SeverancePage() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-gray-400 text-xs block mb-0.5">Company</span>
-              <span className="font-medium text-gray-900">{intake.employer || "—"}</span>
+              {intake.employer ? (
+                <span className="font-medium text-gray-900">{intake.employer}</span>
+              ) : (
+                <input
+                  type="text"
+                  value={inlineCompany}
+                  onChange={(e) => setInlineCompany(e.target.value)}
+                  onBlur={handleSaveInlineFields}
+                  placeholder="Enter company name"
+                  className="font-medium text-gray-900 border border-gray-200 rounded-lg px-2 py-1 text-sm w-full focus:border-blue-400 focus:ring-1 focus:ring-blue-100 focus:outline-none"
+                />
+              )}
             </div>
             <div>
               <span className="text-gray-400 text-xs block mb-0.5">Role</span>
-              <span className="font-medium text-gray-900">{intake.jobTitle || "—"}</span>
+              {intake.jobTitle ? (
+                <span className="font-medium text-gray-900">{intake.jobTitle}</span>
+              ) : (
+                <input
+                  type="text"
+                  value={inlineRole}
+                  onChange={(e) => setInlineRole(e.target.value)}
+                  onBlur={handleSaveInlineFields}
+                  placeholder="Enter your role"
+                  className="font-medium text-gray-900 border border-gray-200 rounded-lg px-2 py-1 text-sm w-full focus:border-blue-400 focus:ring-1 focus:ring-blue-100 focus:outline-none"
+                />
+              )}
             </div>
             <div>
               <span className="text-gray-400 text-xs block mb-0.5">Severance offered</span>
@@ -424,10 +472,18 @@ export default function SeverancePage() {
         {/* ── Questions ── */}
         {(step === "questions" || step === "generating") && (
           <div>
-            <h2 className="text-sm font-semibold text-gray-900 mb-5 flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
               A few quick questions
               <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-600 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded-full leading-none">Pro+</span>
             </h2>
+
+            {!intake.severanceAmount && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-5">
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  We don&apos;t have details about your severance package yet. Answer the questions below and we&apos;ll generate a general negotiation email based on your situation. For a more specific email, <Link href="/onboarding?edit=true" className="text-amber-900 font-medium underline">update your intake</Link> with your severance details first.
+                </p>
+              </div>
+            )}
 
             <div className="flex flex-col gap-6">
               {/* Q1: Tenure */}
